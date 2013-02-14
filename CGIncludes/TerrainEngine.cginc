@@ -3,6 +3,27 @@
 
 // Terrain engine shader helpers
 
+CBUFFER_START(UnityTerrain)
+	// grass
+	fixed4 _WavingTint;
+	float4 _WaveAndDistance;	// wind speed, wave size, wind amount, max sqr distance
+	float4 _CameraPosition;		// .xyz = camera position, .w = 1 / (max sqr distance)
+	float3 _CameraRight, _CameraUp;
+	
+	// trees
+	float4 _Scale;
+	float4x4 _TerrainEngineBendTree;
+	float4 _SquashPlaneNormal;
+	float _SquashAmount;
+	
+	// billboards
+	float3 _TreeBillboardCameraRight;
+	float4 _TreeBillboardCameraUp;
+	float4 _TreeBillboardCameraFront;
+	float4 _TreeBillboardCameraPos;
+	float4 _TreeBillboardDistances; // x = max distance ^ 2
+CBUFFER_END
+
 
 // ---- Vertex input structures
 
@@ -50,12 +71,6 @@ void FastSinCos (float4 val, out float4 s, out float4 c) {
 	// cos
 	c = 1 + r5 * cos8.x + r6 * cos8.y + r7 * cos8.z + r8 * cos8.w;
 }
-
-
-uniform fixed4 _WavingTint;
-uniform float4 _WaveAndDistance;	// wind speed, wave size, wind amount, max sqr distance
-uniform float4 _CameraPosition;		// .xyz = camera position, .w = 1 / (max sqr distance)
-uniform float3 _CameraRight, _CameraUp;
 
 fixed4 TerrainWaveGrass (inout float4 vertex, float waveAmount, fixed4 color)
 {
@@ -138,11 +153,6 @@ void WavingGrassBillboardVert (inout appdata_full v)
 
 // ---- Tree helpers
 
-uniform float4 _Scale;
-uniform float4x4 _TerrainEngineBendTree;
-
-uniform float4 _SquashPlaneNormal;
-uniform float _SquashAmount;
 
 inline float4 Squash(in float4 pos)
 {
@@ -179,12 +189,6 @@ void TerrainAnimateTree( inout float4 pos, float alpha )
 
 
 // ---- Billboarded tree helpers
-
-uniform float3 _TreeBillboardCameraRight;
-uniform float4 _TreeBillboardCameraUp;
-uniform float4 _TreeBillboardCameraFront;
-uniform float4 _TreeBillboardCameraPos;
-uniform float4 _TreeBillboardDistances; // x = max distance ^ 2
 
 
 void TerrainBillboardTree( inout float4 pos, float2 offset, float offsetz )

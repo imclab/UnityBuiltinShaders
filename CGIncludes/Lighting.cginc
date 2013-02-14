@@ -135,4 +135,13 @@ inline half4 LightingBlinnPhong_DirLightmap (SurfaceOutput s, fixed4 color, fixe
 	return half4(lm, spec);
 }
 
+
+
+#ifdef UNITY_CAN_COMPILE_TESSELLATION
+struct UnityTessellationFactors {
+    float edge[3] : SV_TessFactor;
+    float inside : SV_InsideTessFactor;
+};
+#endif // UNITY_CAN_COMPILE_TESSELLATION
+
 #endif

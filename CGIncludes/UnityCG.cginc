@@ -1,50 +1,14 @@
 #ifndef UNITY_CG_INCLUDED
 #define UNITY_CG_INCLUDED
 
-#if defined (DIRECTIONAL_COOKIE) || defined (DIRECTIONAL)
-#define USING_DIRECTIONAL_LIGHT
-#endif
+#include "UnityShaderVariables.cginc"
 
 
-// -------------------------------------------------------------------
-//  builtin values exposed from Unity
 
-// Time values from Unity
-uniform float4 _Time;
-uniform float4 _SinTime;
-uniform float4 _CosTime;
-
-// x = 1 or -1 (-1 if projection is flipped)
-// y = near plane
-// z = far plane
-// w = 1/far plane
-uniform float4 _ProjectionParams;
-
-// x = width
-// y = height
-// z = 1 + 1.0/width
-// w = 1 + 1.0/height
-uniform float4 _ScreenParams;
 
 #if SHADER_API_FLASH
 uniform float4 unity_NPOTScale;
 #endif
-
-// w = 1 / uniform scale
-uniform float4 unity_Scale;
-
-uniform float3 _WorldSpaceCameraPos;
-#ifdef USING_DIRECTIONAL_LIGHT
-uniform fixed4 _WorldSpaceLightPos0;
-#else
-uniform float4 _WorldSpaceLightPos0;
-#endif
-
-uniform float4x4 _Object2World, _World2Object;
-
-uniform float4 _LightPositionRange; // xyz = pos, w = 1/range
-
-
 #if defined(SHADER_API_PS3)
 #	define UNITY_SAMPLE_DEPTH(value) (dot((value).wxy, float3(0.996093809371817670572857294849, 0.0038909914428586627756752238080039, 1.5199185323666651467481343000015e-5)))
 #elif defined(SHADER_API_FLASH)
@@ -142,16 +106,6 @@ inline float3 ObjSpaceViewDir( in float4 v )
 	float3x3 rotation = float3x3( v.tangent.xyz, binormal, v.normal )
 
 
-float4 unity_4LightPosX0;
-float4 unity_4LightPosY0;
-float4 unity_4LightPosZ0;
-float4 unity_4LightAtten0;
-
-float4 unity_LightColor[4];
-float4 unity_LightPosition[4];
-float4 unity_LightAtten[4];
-
-float3 unity_LightColor0, unity_LightColor1, unity_LightColor2, unity_LightColor3; // keeping those only for any existing shaders; remove in 4.0
 
 
 float3 Shade4PointLights (
@@ -205,16 +159,6 @@ float3 ShadeVertexLights (float4 vertex, float3 normal)
 	return lightColor;
 }
 
-
-
-// SH lighting environment
-float4 unity_SHAr;
-float4 unity_SHAg;
-float4 unity_SHAb;
-float4 unity_SHBr;
-float4 unity_SHBg;
-float4 unity_SHBb;
-float4 unity_SHC;
 
 // normal should be normalized, w=1.0
 half3 ShadeSH9 (half4 normal)
@@ -408,7 +352,6 @@ inline fixed3 UnpackNormal(fixed4 packednormal)
 #endif
 }
 
-uniform float4 _ZBufferParams;
 
 // Z buffer to linear 0..1 depth (0 at eye, 1 at far plane)
 inline float Linear01Depth( float z )
@@ -484,7 +427,6 @@ inline float3 TransformViewToProjection (float3 v) {
 
 // Shadow caster pass helpers
 
-float4 unity_LightShadowBias;
 
 #ifdef SHADOWS_CUBE
 	#define V2F_SHADOW_CASTER float4 pos : SV_POSITION; float3 vec : TEXCOORD0
@@ -494,11 +436,11 @@ float4 unity_LightShadowBias;
 	#if defined(UNITY_MIGHT_NOT_HAVE_DEPTH_TEXTURE)
 	#define V2F_SHADOW_CASTER float4 pos : SV_POSITION; float4 hpos : TEXCOORD0
 	#define TRANSFER_SHADOW_CASTER(o) o.pos = mul(UNITY_MATRIX_MVP, v.vertex); o.pos.z += unity_LightShadowBias.x; \
-	float clamped = max(o.pos.z, 0.0); o.pos.z = lerp(o.pos.z, clamped, unity_LightShadowBias.y); o.hpos = o.pos;
+	float clamped = max(o.pos.z, o.pos.w*UNITY_NEAR_CLIP_VALUE); o.pos.z = lerp(o.pos.z, clamped, unity_LightShadowBias.y); o.hpos = o.pos;
 	#else
 	#define V2F_SHADOW_CASTER float4 pos : SV_POSITION
 	#define TRANSFER_SHADOW_CASTER(o) o.pos = mul(UNITY_MATRIX_MVP, v.vertex); o.pos.z += unity_LightShadowBias.x; \
-	float clamped = max(o.pos.z, -o.pos.w); o.pos.z = lerp(o.pos.z, clamped, unity_LightShadowBias.y);
+	float clamped = max(o.pos.z, o.pos.w*UNITY_NEAR_CLIP_VALUE); o.pos.z = lerp(o.pos.z, clamped, unity_LightShadowBias.y);
 	#endif
 	#define SHADOW_CASTER_FRAGMENT(i) UNITY_OUTPUT_DEPTH(i.hpos.zw);
 #endif
@@ -506,14 +448,11 @@ float4 unity_LightShadowBias;
 // Shadow collector pass helpers
 #ifdef SHADOW_COLLECTOR_PASS
 
-// Keeping these for compatibility
-uniform float4x4 _World2Shadow;
-uniform float4x4 _World2Shadow1;
-uniform float4x4 _World2Shadow2;
-uniform float4x4 _World2Shadow3;
 
-uniform float4x4 unity_World2Shadow[4];
-uniform float4 _LightShadowData;
+#if !defined(SHADOWMAPSAMPLER_DEFINED)
+UNITY_DECLARE_SHADOWMAP(_ShadowMapTexture);
+#endif
+
 
 #define V2F_SHADOW_COLLECTOR float4 pos : SV_POSITION; float3 _ShadowCoord0 : TEXCOORD0; float3 _ShadowCoord1 : TEXCOORD1; float3 _ShadowCoord2 : TEXCOORD2; float3 _ShadowCoord3 : TEXCOORD3; float4 _WorldPosViewZ : TEXCOORD4
 #define TRANSFER_SHADOW_COLLECTOR(o)	\
@@ -526,16 +465,10 @@ uniform float4 _LightShadowData;
 	o._ShadowCoord2 = mul(unity_World2Shadow[2], wpos).xyz; \
 	o._ShadowCoord3 = mul(unity_World2Shadow[3], wpos).xyz;
 
-uniform float4 _LightSplitsNear;
-uniform float4 _LightSplitsFar;
-uniform float4 unity_ShadowFadeCenterAndType;
-uniform float4 unity_ShadowSplitSpheres[4];
-uniform float4 unity_ShadowSplitSqRadii;
-sampler2D _ShadowMapTexture;
 
 #if defined (SHADOWS_NATIVE)
 	#define SAMPLE_SHADOW_COLLECTOR_SHADOW(coord) \
-	half shadow = tex2Dproj( _ShadowMapTexture, UNITY_PROJ_COORD(coord) ).r; \
+	half shadow = UNITY_SAMPLE_SHADOW(_ShadowMapTexture,coord); \
 	shadow = _LightShadowData.r + shadow * (1-_LightShadowData.r);
 #else
 	#define SAMPLE_SHADOW_COLLECTOR_SHADOW(coord) \

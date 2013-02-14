@@ -1,23 +1,45 @@
 #ifndef AUTOLIGHT_INCLUDED
 #define AUTOLIGHT_INCLUDED
 
+#include "HLSLSupport.cginc"
 
 // ------------ Shadow helpers --------
+
 
 // ---- Screen space shadows
 #if defined (SHADOWS_SCREEN)
 
 uniform float4 _ShadowOffsets[4];
 
-#define SHADOW_COORDS(idx1) float4 _ShadowCoord : TEXCOORD##idx1;
-#define TRANSFER_SHADOW(a) a._ShadowCoord = ComputeScreenPos(o.pos);
 uniform sampler2D _ShadowMapTexture;
+
+#define SHADOW_COORDS(idx1) float4 _ShadowCoord : TEXCOORD##idx1;
+
+#if defined(SHADER_API_GLES) && defined(SHADER_API_MOBILE)
+#define TRANSFER_SHADOW(a) a._ShadowCoord = mul( unity_World2Shadow[0], mul( _Object2World, v.vertex ) );
+
+inline fixed unitySampleShadow (float4 shadowCoord)
+{
+	float dist = tex2Dproj( _ShadowMapTexture, UNITY_PROJ_COORD(shadowCoord) ).x;
+
+	// tegra is confused if we use _LightShadowData.x directly
+	// with "ambiguous overloaded function reference max(mediump float, float)"
+	half lightShadowDataX = _LightShadowData.x;
+	return max(dist > (shadowCoord.z/shadowCoord.w), lightShadowDataX);
+}
+
+#else // !(defined(SHADER_API_GLES) && defined(SHADER_API_MOBILE))
+
+#define TRANSFER_SHADOW(a) a._ShadowCoord = ComputeScreenPos(o.pos);
 
 inline fixed unitySampleShadow (float4 shadowCoord)
 {
 	fixed shadow = tex2Dproj( _ShadowMapTexture, UNITY_PROJ_COORD(shadowCoord) ).r;
 	return shadow;
 }
+
+#endif
+
 #define SHADOW_ATTENUATION(a) unitySampleShadow(a._ShadowCoord)
 
 #endif
@@ -27,9 +49,9 @@ inline fixed unitySampleShadow (float4 shadowCoord)
 
 #if defined (SHADOWS_DEPTH) && defined (SPOT)
 
-sampler2D _ShadowMapTexture;
-float4x4 unity_World2Shadow;
-float4 _LightShadowData;
+#if !defined(SHADOWMAPSAMPLER_DEFINED)
+UNITY_DECLARE_SHADOWMAP(_ShadowMapTexture);
+#endif
 #if defined (SHADOWS_SOFT)
 uniform float4 _ShadowOffsets[4];
 #endif
@@ -37,16 +59,16 @@ uniform float4 _ShadowOffsets[4];
 inline fixed unitySampleShadow (float4 shadowCoord)
 {
 	#if defined (SHADOWS_SOFT)
-	
+
 	// 4-tap shadows
-	
+
 	float3 coord = shadowCoord.xyz / shadowCoord.w;
 	#if defined (SHADOWS_NATIVE) && !defined (SHADER_API_OPENGL)
 	half4 shadows;
-	shadows.x = tex2D( _ShadowMapTexture, coord + _ShadowOffsets[0] ).r;
-	shadows.y = tex2D( _ShadowMapTexture, coord + _ShadowOffsets[1] ).r;
-	shadows.z = tex2D( _ShadowMapTexture, coord + _ShadowOffsets[2] ).r;
-	shadows.w = tex2D( _ShadowMapTexture, coord + _ShadowOffsets[3] ).r;	
+	shadows.x = UNITY_SAMPLE_SHADOW(_ShadowMapTexture, coord + _ShadowOffsets[0]);
+	shadows.y = UNITY_SAMPLE_SHADOW(_ShadowMapTexture, coord + _ShadowOffsets[1]);
+	shadows.z = UNITY_SAMPLE_SHADOW(_ShadowMapTexture, coord + _ShadowOffsets[2]);
+	shadows.w = UNITY_SAMPLE_SHADOW(_ShadowMapTexture, coord + _ShadowOffsets[3]);
 	shadows = _LightShadowData.rrrr + shadows * (1-_LightShadowData.rrrr);
 	#else
 	float4 shadowVals;
@@ -56,28 +78,28 @@ inline fixed unitySampleShadow (float4 shadowCoord)
 	shadowVals.w = UNITY_SAMPLE_DEPTH (tex2D( _ShadowMapTexture, coord + _ShadowOffsets[3].xy ));
 	half4 shadows = (shadowVals < coord.zzzz) ? _LightShadowData.rrrr : 1.0f;
 	#endif
-	
+
 	// average-4 PCF
 	half shadow = dot (shadows, 0.25f);
-	
+
 	#else
-	
+
 	// 1-tap shadows
-	
+
 	// Native sampling of depth textures is broken on Intel 10.4.8, and does not exist on PPC. So sample manually :(
 	#if defined (SHADOWS_NATIVE) && !defined (SHADER_API_OPENGL)
-	half shadow = tex2Dproj (_ShadowMapTexture, UNITY_PROJ_COORD(shadowCoord)).r;
+	half shadow = UNITY_SAMPLE_SHADOW_PROJ(_ShadowMapTexture, shadowCoord);
 	shadow = _LightShadowData.r + shadow * (1-_LightShadowData.r);
 	#else
 	half shadow = UNITY_SAMPLE_DEPTH(tex2Dproj (_ShadowMapTexture, UNITY_PROJ_COORD(shadowCoord))) < (shadowCoord.z / shadowCoord.w) ? _LightShadowData.r : 1.0;
 	#endif
-	
+
 	#endif
-	
+
 	return shadow;
 }
 #define SHADOW_COORDS(idx1) float4 _ShadowCoord : TEXCOORD##idx1;
-#define TRANSFER_SHADOW(a) a._ShadowCoord = mul (unity_World2Shadow, mul(_Object2World,v.vertex));
+#define TRANSFER_SHADOW(a) a._ShadowCoord = mul (unity_World2Shadow[0], mul(_Object2World,v.vertex));
 #define SHADOW_ATTENUATION(a) unitySampleShadow(a._ShadowCoord)
 
 #endif
@@ -87,7 +109,6 @@ inline fixed unitySampleShadow (float4 shadowCoord)
 
 #if defined (SHADOWS_CUBE)
 
-float4 _LightShadowData;
 uniform samplerCUBE _ShadowMapTexture;
 inline float SampleCubeDistance (float3 vec)
 {
@@ -98,7 +119,7 @@ inline float unityCubeShadow (float3 vec)
 {
 	float mydist = length(vec) * _LightPositionRange.w;
 	mydist *= 0.97; // bias
-	
+
 	#if defined (SHADOWS_SOFT)
 	float z = 1.0/128.0;
 	float4 shadowVals;
@@ -107,7 +128,7 @@ inline float unityCubeShadow (float3 vec)
 	shadowVals.z = SampleCubeDistance (vec+float3(-z, z,-z));
 	shadowVals.w = SampleCubeDistance (vec+float3( z,-z,-z));
 	half4 shadows = (shadowVals < mydist.xxxx) ? _LightShadowData.rrrr : 1.0f;
-	return dot(shadows,0.25);	
+	return dot(shadows,0.25);
 	#else
 	float dist = SampleCubeDistance (vec);
 	return dist < mydist ? _LightShadowData.r : 1.0;
@@ -161,9 +182,9 @@ inline fixed UnitySpotAttenuate(float3 LightCoord)
 
 
 #ifdef DIRECTIONAL
-#define LIGHTING_COORDS(idx1,idx2) SHADOW_COORDS(idx1)
-#define TRANSFER_VERTEX_TO_FRAGMENT(a) TRANSFER_SHADOW(a)
-#define LIGHT_ATTENUATION(a)	SHADOW_ATTENUATION(a)
+	#define LIGHTING_COORDS(idx1,idx2) SHADOW_COORDS(idx1)
+	#define TRANSFER_VERTEX_TO_FRAGMENT(a) TRANSFER_SHADOW(a)
+	#define LIGHT_ATTENUATION(a)	SHADOW_ATTENUATION(a)
 #endif
 
 
