@@ -21,6 +21,9 @@
 #if (defined(SHADER_API_D3D9) || defined(SHADER_API_OPENGL) || defined(SHADER_API_PS3)) && !defined(SHADER_TARGET_GLSL)
 // Cg seems to use WPOS instead of VPOS semantic?
 #define VPOS WPOS
+// Cg does not have tex2Dgrad and friends, but has tex2D overload that
+// can take the derivatives
+half4 tex2Dgrad (in sampler2D s, in float2 t, in float2 dx, in float2 dy) { return tex2D (s, t, dx, dy); }
 #endif
 
 #if !defined(SHADER_API_XBOX360) && !defined(SHADER_API_PS3) && !defined(SHADER_API_GLES) && !defined(SHADER_TARGET_GLSL) && !defined(SHADER_API_D3D11)
@@ -44,7 +47,7 @@ float4 tex2Dproj(in sampler2D s, in float3 t)
 
 #endif
 
-#if defined(SHADER_API_XBOX360) || defined(SHADER_API_D3D11) || defined (SHADER_TARGET_GLSL)
+#if defined(SHADER_API_XBOX360) || defined(SHADER_API_D3D11) || defined (SHADER_TARGET_GLSL) || defined(SHADER_API_PS3)
 
 float4x4 glstate_matrix_mvp;
 float4x4 glstate_matrix_modelview0;
@@ -89,7 +92,6 @@ float4	 glstate_lightmodel_ambient;
 #define UNITY_MATRIX_TEXTURE2 glstate.matrix.texture[2]
 #define UNITY_MATRIX_TEXTURE3 glstate.matrix.texture[3]
 #define UNITY_LIGHTMODEL_AMBIENT glstate.lightmodel.ambient
-
 
 #endif
 

@@ -90,7 +90,7 @@ SubShader {
 		
 		CGPROGRAM
 		#pragma vertex vert
-		#pragma exclude_renderers gles xbox360 ps3
+		#pragma exclude_renderers shaderonly
 		#include "UnityCG.cginc"
 
 		struct v2f {

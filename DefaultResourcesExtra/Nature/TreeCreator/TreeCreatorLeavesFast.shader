@@ -29,6 +29,7 @@ SubShader {
 
 		#pragma vertex VertexLeaf
 		#pragma fragment FragmentLeaf
+		#pragma exclude_renderers molehill
 		#pragma multi_compile_fwdbase nolightmap
 		
 		sampler2D _MainTex;

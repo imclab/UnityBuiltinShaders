@@ -19,7 +19,6 @@ Shader "Hidden/TerrainEngine/BillboardTree" {
 
 			struct v2f {
 				float4 pos : POSITION;
-				float fog : FOGC;
 				fixed4 color : COLOR0;
 				float2 uv : TEXCOORD0;
 			};
@@ -28,7 +27,6 @@ Shader "Hidden/TerrainEngine/BillboardTree" {
 				v2f o;
 				TerrainBillboardTree(v.vertex, v.texcoord1.xy, v.texcoord.y);	
 				o.pos = mul (UNITY_MATRIX_MVP, v.vertex);
-				o.fog = o.pos.z;
 				o.uv.x = v.texcoord.x;
 				o.uv.y = v.texcoord.y > 0;
 				o.color = v.color;
@@ -54,13 +52,12 @@ Shader "Hidden/TerrainEngine/BillboardTree" {
 
 			CGPROGRAM
 			#pragma vertex vert
-			#pragma exclude_renderers gles xbox360 ps3
+			#pragma exclude_renderers shaderonly
 			#include "UnityCG.cginc"
 			#include "TerrainEngine.cginc"
 
 			struct v2f {
 				float4 pos : POSITION;
-				float fog : FOGC;
 				fixed4 color : COLOR0;
 				float2 uv : TEXCOORD0;
 			};
@@ -69,7 +66,6 @@ Shader "Hidden/TerrainEngine/BillboardTree" {
 				v2f o;
 				TerrainBillboardTree(v.vertex, v.texcoord1.xy, v.texcoord.y);	
 				o.pos = mul (UNITY_MATRIX_MVP, v.vertex);
-				o.fog = o.pos.z;
 				o.uv.x = v.texcoord.x;
 				o.uv.y = v.texcoord.y > 0;
 				o.color = v.color;

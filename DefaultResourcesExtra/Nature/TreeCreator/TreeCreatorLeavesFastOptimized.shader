@@ -30,6 +30,7 @@ SubShader {
 
 		#pragma vertex VertexLeaf
 		#pragma fragment FragmentLeaf
+		#pragma exclude_renderers molehill
 		#pragma multi_compile_fwdbase nolightmap
 		
 		sampler2D _MainTex;
@@ -113,6 +114,7 @@ SubShader {
 	CGPROGRAM
 		#pragma vertex vert_surf
 		#pragma fragment frag_surf
+		#pragma exclude_renderers noshadows
 		#pragma fragmentoption ARB_precision_hint_fastest
 		#pragma multi_compile_shadowcaster
 		#include "HLSLSupport.cginc"
@@ -164,6 +166,7 @@ SubShader {
 	CGPROGRAM
 		#pragma vertex vert
 		#pragma fragment frag
+		#pragma exclude_renderers noshadows
 		#pragma fragmentoption ARB_precision_hint_fastest
 		#pragma multi_compile_shadowcollector
 
@@ -213,7 +216,7 @@ SubShader {
 	
 	Pass {
 		CGPROGRAM
-		#pragma exclude_renderers gles xbox360 ps3
+		#pragma exclude_renderers shaderonly
 		#pragma vertex TreeVertLit
 		#include "UnityCG.cginc"
 		#include "TreeVertexLit.cginc"

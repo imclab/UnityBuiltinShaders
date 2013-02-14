@@ -29,8 +29,8 @@ sampler2D _Control;
 sampler2D _Splat0,_Splat1,_Splat2,_Splat3;
 
 void surf (Input IN, inout SurfaceOutput o) {
-	half4 splat_control = tex2D (_Control, IN.uv_Control);
-	half3 col;
+	fixed4 splat_control = tex2D (_Control, IN.uv_Control);
+	fixed3 col;
 	col  = splat_control.r * tex2D (_Splat0, IN.uv_Splat0).rgb;
 	col += splat_control.g * tex2D (_Splat1, IN.uv_Splat1).rgb;
 	col += splat_control.b * tex2D (_Splat2, IN.uv_Splat2).rgb;

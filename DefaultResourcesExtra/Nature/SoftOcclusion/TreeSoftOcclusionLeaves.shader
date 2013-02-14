@@ -27,6 +27,7 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 			CGPROGRAM
 			#pragma vertex leaves
 			#pragma fragment frag 
+			#pragma glsl_no_auto_normalization
 			#include "SH_Vertex.cginc"
 			
 			sampler2D _MainTex;
@@ -55,6 +56,7 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
+			#pragma glsl_no_auto_normalization
 			#pragma fragmentoption ARB_precision_hint_fastest
 			#pragma multi_compile_shadowcaster
 			#include "UnityCG.cginc"
@@ -103,7 +105,7 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 		
 		Pass {
 			CGPROGRAM
-			#pragma exclude_renderers gles xbox360 ps3
+			#pragma exclude_renderers shaderonly
 			#pragma vertex leaves
 			#include "SH_Vertex.cginc"
 			ENDCG

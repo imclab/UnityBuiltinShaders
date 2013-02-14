@@ -39,9 +39,11 @@ inline fixed4 LightingLambert_PrePass (SurfaceOutput s, half4 light)
 }
 
 
-inline fixed4 LightingBlinnPhong (SurfaceOutput s, fixed3 lightDir, fixed3 viewDir, fixed atten)
+// NOTE: some intricacy in shader compiler on some GLES2.0 platforms (iOS) needs 'viewDir' & 'h'
+// to be mediump instead of lowp, otherwise specular highlight becomes too bright.
+inline fixed4 LightingBlinnPhong (SurfaceOutput s, fixed3 lightDir, half3 viewDir, fixed atten)
 {
-	fixed3 h = normalize (lightDir + viewDir);
+	half3 h = normalize (lightDir + viewDir);
 	
 	fixed diff = max (0, dot (s.Normal, lightDir));
 	

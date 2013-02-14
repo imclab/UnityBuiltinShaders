@@ -26,6 +26,7 @@ SubShader {
 	
 CGPROGRAM
 #pragma surface surf TreeLeaf alphatest:_Cutoff vertex:TreeVertLeaf nolightmap
+#pragma exclude_renderers molehill
 #pragma glsl_no_auto_normalization
 #include "Tree.cginc"
 
@@ -65,6 +66,7 @@ ENDCG
 		CGPROGRAM
 		#pragma vertex vert_surf
 		#pragma fragment frag_surf
+		#pragma exclude_renderers noshadows
 		#pragma glsl_no_auto_normalization
 		#pragma fragmentoption ARB_precision_hint_fastest
 		#pragma multi_compile_shadowcaster
@@ -115,6 +117,7 @@ ENDCG
 		CGPROGRAM
 		#pragma vertex vert_surf
 		#pragma fragment frag_surf
+		#pragma exclude_renderers noshadows
 		#pragma fragmentoption ARB_precision_hint_fastest
 		#pragma multi_compile_shadowcollector
 		#pragma glsl_no_auto_normalization
@@ -188,7 +191,7 @@ SubShader {
 	Pass {
 		CGPROGRAM
 		#pragma vertex TreeVertLit
-		#pragma exclude_renderers gles xbox360 ps3
+		#pragma exclude_renderers shaderonly
 		
 		#include "UnityCG.cginc"
 		#include "Tree.cginc"

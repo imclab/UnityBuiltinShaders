@@ -10,6 +10,7 @@ Pass {
 CGPROGRAM
 #pragma vertex vert
 #pragma fragment frag
+#pragma exclude_renderers noshadows
 #pragma glsl_no_auto_normalization
 #pragma multi_compile_shadowcollector
 
@@ -38,32 +39,50 @@ sampler2D _CameraDepthTexture;
 float4 unity_LightmapFade;
 
 float4x4 _CameraToWorld;
-float4x4 unity_World2Shadow;
-float4x4 unity_World2Shadow1;
-float4x4 unity_World2Shadow2;
-float4x4 unity_World2Shadow3;
+float4x4 unity_World2Shadow[4];
 float4 _LightSplitsNear;
 float4 _LightSplitsFar;
+float4 unity_ShadowSplitSpheres[4];
+float4 unity_ShadowSplitSqRadii;
+float4 unity_ShadowFadeCenterAndType;
+
 float4 _LightShadowData;
 sampler2D _ShadowMapTexture;
 
+inline float SquareLength(float3 vec)
+{
+	return dot(vec, vec);
+}
+
 inline half unitySampleShadow (float4 wpos, float z)
 {
-	float3 sc0 = mul (unity_World2Shadow, wpos).xyz;
-	float3 sc1 = mul (unity_World2Shadow1, wpos).xyz;
-	float3 sc2 = mul (unity_World2Shadow2, wpos).xyz;
-	float3 sc3 = mul (unity_World2Shadow3, wpos).xyz;
+	float3 sc0 = mul (unity_World2Shadow[0], wpos).xyz;
+	float3 sc1 = mul (unity_World2Shadow[1], wpos).xyz;
+	float3 sc2 = mul (unity_World2Shadow[2], wpos).xyz;
+	float3 sc3 = mul (unity_World2Shadow[3], wpos).xyz;
+
+#if defined (SHADOWS_SPLIT_SPHERES)
+	float3 fromCenter0 = wpos.xyz - unity_ShadowSplitSpheres[0].xyz;
+	float3 fromCenter1 = wpos.xyz - unity_ShadowSplitSpheres[1].xyz;
+	float3 fromCenter2 = wpos.xyz - unity_ShadowSplitSpheres[2].xyz;
+	float3 fromCenter3 = wpos.xyz - unity_ShadowSplitSpheres[3].xyz;
+	float4 distances2 = float4(dot(fromCenter0,fromCenter0), dot(fromCenter1,fromCenter1), dot(fromCenter2,fromCenter2), dot(fromCenter3,fromCenter3));
+	float4 weights = float4(distances2 < unity_ShadowSplitSqRadii);
+	weights.yzw = saturate(weights.yzw - weights.xyz);
+#else
+	float4 zNear = float4( z >= _LightSplitsNear );
+	float4 zFar = float4( z < _LightSplitsFar );
+	float4 weights = zNear * zFar;
+#endif
 	
-	float4 near = float4( z >= _LightSplitsNear );
-	float4 far = float4( z < _LightSplitsFar );
-	float4 weights = near * far;
 	float4 coord = float4(sc0 * weights[0] + sc1 * weights[1] + sc2 * weights[2] + sc3 * weights[3], 1);
-	#if defined (SHADOWS_NATIVE) && !defined (SHADER_API_OPENGL)
+#if defined (SHADOWS_NATIVE) && !defined (SHADER_API_OPENGL)
 	half shadow = tex2Dproj (_ShadowMapTexture, UNITY_PROJ_COORD(coord)).r;
-	shadow = _LightShadowData.r + shadow * (1-_LightShadowData.r);
-	#else
+	shadow = lerp(_LightShadowData.r, 1.0, shadow);
+#else
 	half shadow = tex2D (_ShadowMapTexture, coord.xy).r < coord.z ? _LightShadowData.r : 1.0;
-	#endif
+#endif
+	//shadow = dot(weights, float4(0,0.33,0.66,1)*0.33);
 	return shadow;
 }
 

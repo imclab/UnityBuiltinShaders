@@ -11,7 +11,7 @@ Properties {
 // ---- Dual texture cards
 SubShader {
 	Tags { "RenderType"="Opaque" }
-	LOD 100
+	LOD 80
 	
 	// Non-lightmapped
 	Pass {
@@ -88,7 +88,7 @@ SubShader {
 	}	
 	// Lightmapped, encoded as dLDR
 	Pass {
-		// 1st pass - sample Ligltmap
+		// 1st pass - sample Lightmap
 		Tags { "LightMode" = "VertexLM" }
 
 		BindChannels {

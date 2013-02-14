@@ -13,6 +13,7 @@ CGPROGRAM
 #pragma target 3.0
 #pragma vertex vert
 #pragma fragment frag
+#pragma exclude_renderers noprepass
 #pragma glsl_no_auto_normalization
 #pragma multi_compile_lightpass
 
@@ -49,6 +50,7 @@ float4 _LightPos;
 float4 _LightColor;
 float4 _LightShadowData;
 float4 unity_LightmapFade;
+float4 unity_ShadowFadeCenterAndType;
 float4x4 _CameraToWorld;
 float4x4 _LightMatrix0;
 sampler2D _LightTextureB0;
@@ -148,10 +150,16 @@ inline half unitySampleShadow (float3 vec, float mydist)
 sampler2D _ShadowMapTexture;
 #endif
 
-half ComputeShadow(float3 vec, float z, float2 uv)
+float ComputeFadeDistance(float3 wpos, float z)
+{
+	float sphereDist = distance(wpos, unity_ShadowFadeCenterAndType.xyz);
+	return lerp(z, sphereDist, unity_ShadowFadeCenterAndType.w);
+}
+
+half ComputeShadow(float3 vec, float fadeDist, float2 uv)
 {
 	#if defined(SHADOWS_DEPTH) || defined(SHADOWS_SCREEN) || defined(SHADOWS_CUBE)
-	float fade = z * _LightShadowData.z + _LightShadowData.w;
+	float fade = fadeDist * _LightShadowData.z + _LightShadowData.w;
 	fade = saturate(fade);
 	#endif
 	
@@ -193,6 +201,8 @@ fixed4 frag (v2f i) : COLOR
 	float4 vpos = float4(i.ray * depth,1);
 	float3 wpos = mul (_CameraToWorld, vpos).xyz;
 
+	float fadeDist = ComputeFadeDistance(wpos, vpos.z);
+	
 	#if defined (SPOT)	
 	float3 tolight = _LightPos.xyz - wpos;
 	half3 lightDir = normalize (tolight);
@@ -203,7 +213,7 @@ fixed4 frag (v2f i) : COLOR
 	float att = dot(tolight, tolight) * _LightPos.w;
 	atten *= tex2D (_LightTextureB0, att.rr).UNITY_ATTEN_CHANNEL;
 	
-	atten *= ComputeShadow (wpos, vpos.z, uv);
+	atten *= ComputeShadow (wpos, fadeDist, uv);
 	
 	#endif //SPOT
 	
@@ -213,7 +223,7 @@ fixed4 frag (v2f i) : COLOR
 	half3 lightDir = -_LightDir.xyz;
 	float atten = 1.0;
 	
-	atten *= ComputeShadow (wpos, vpos.z, uv);
+	atten *= ComputeShadow (wpos, fadeDist, uv);
 	
 	#if defined (DIRECTIONAL_COOKIE)
 	atten *= tex2D (_LightTexture0, mul(_LightMatrix0, half4(wpos,1)).xy).w;
@@ -229,7 +239,7 @@ fixed4 frag (v2f i) : COLOR
 	float att = dot(tolight, tolight) * _LightPos.w;
 	float atten = tex2D (_LightTextureB0, att.rr).UNITY_ATTEN_CHANNEL;
 	
-	atten *= ComputeShadow (tolight, vpos.z, uv);
+	atten *= ComputeShadow (tolight, fadeDist, uv);
 	
 	#if defined (POINT_COOKIE)
 	atten *= texCUBE(_LightTexture0, mul(_LightMatrix0, half4(wpos,1)).xyz).w;
@@ -247,7 +257,7 @@ fixed4 frag (v2f i) : COLOR
 	res.xyz = _LightColor.rgb * (diff * atten);
 	res.w = spec * Luminance (_LightColor.rgb);
 	
-	float fade = vpos.z * unity_LightmapFade.z + unity_LightmapFade.w;
+	float fade = fadeDist * unity_LightmapFade.z + unity_LightmapFade.w;
 	res *= saturate(1.0-fade);
 	
 	return exp2(-res);

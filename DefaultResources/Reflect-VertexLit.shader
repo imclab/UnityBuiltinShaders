@@ -77,7 +77,7 @@ ENDCG
 			}
 			SeparateSpecular On
 CGPROGRAM
-#pragma exclude_renderers gles xbox360 ps3
+#pragma exclude_renderers shaderonly
 #pragma fragment frag
 #pragma fragmentoption ARB_precision_hint_fastest
 

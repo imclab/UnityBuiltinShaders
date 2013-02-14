@@ -41,6 +41,7 @@ ENDCG
 				
 CGPROGRAM
 #pragma surface surf Lambert vertex:WavingGrassBillboardVert addshadow
+#pragma exclude_renderers molehill
 			
 sampler2D _MainTex;
 fixed _Cutoff;
@@ -75,7 +76,7 @@ ENDCG
 		Pass {
 			CGPROGRAM
 			#pragma vertex BillboardVert
-			#pragma exclude_renderers gles xbox360 ps3
+			#pragma exclude_renderers shaderonly
 			ENDCG
 
 			AlphaTest Greater [_Cutoff]

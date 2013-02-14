@@ -18,6 +18,7 @@ Shader "Hidden/Nature/Tree Soft Occlusion Bark Rendertex" {
 			CGPROGRAM
 			#pragma vertex bark
 			#pragma fragment frag 
+			#pragma glsl_no_auto_normalization
 			#define WRITE_ALPHA_1 1
 			#define USE_CUSTOM_LIGHT_DIR 1
 			#include "SH_Vertex.cginc"
@@ -40,7 +41,7 @@ Shader "Hidden/Nature/Tree Soft Occlusion Bark Rendertex" {
 			Lighting On
 			
 			CGPROGRAM
-			#pragma exclude_renderers gles xbox360 ps3
+			#pragma exclude_renderers shaderonly
 			#pragma vertex bark
 			#define WRITE_ALPHA_1 1
 			#define USE_CUSTOM_LIGHT_DIR 1

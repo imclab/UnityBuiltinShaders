@@ -25,6 +25,7 @@ Shader "Hidden/Nature/Tree Soft Occlusion Leaves Rendertex" {
 			CGPROGRAM
 			#pragma vertex leaves
 			#pragma fragment frag
+			#pragma glsl_no_auto_normalization
 			#define USE_CUSTOM_LIGHT_DIR 1
 			#include "SH_Vertex.cginc"
 			
@@ -49,7 +50,7 @@ Shader "Hidden/Nature/Tree Soft Occlusion Leaves Rendertex" {
 		
 		Pass {
 			CGPROGRAM
-			#pragma exclude_renderers gles xbox360 ps3
+			#pragma exclude_renderers shaderonly
 			#pragma vertex leaves
 			#define USE_CUSTOM_LIGHT_DIR 1
 			#include "SH_Vertex.cginc"

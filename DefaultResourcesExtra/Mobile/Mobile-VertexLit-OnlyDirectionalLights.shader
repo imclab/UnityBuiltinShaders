@@ -11,7 +11,7 @@ Shader "Mobile/VertexLit (Only Directional Lights)" {
 	}
 	SubShader {
 		Tags { "RenderType"="Opaque" }
-		LOD 200
+		LOD 80
 		
 	Pass {
 		Name "FORWARD"

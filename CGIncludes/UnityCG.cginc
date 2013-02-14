@@ -135,10 +135,11 @@ float4 unity_4LightPosY0;
 float4 unity_4LightPosZ0;
 float4 unity_4LightAtten0;
 
-float3 unity_LightColor0;
-float3 unity_LightColor1;
-float3 unity_LightColor2;
-float3 unity_LightColor3;
+float4 unity_LightColor[4];
+float4 unity_LightPosition[4];
+float4 unity_LightAtten[4];
+
+float3 unity_LightColor0, unity_LightColor1, unity_LightColor2, unity_LightColor3; // keeping those only for any existing shaders; remove in 4.0
 
 
 float3 Shade4PointLights (
@@ -182,15 +183,13 @@ float3 ShadeVertexLights (float4 vertex, float3 normal)
 	float3 viewpos = mul (UNITY_MATRIX_MV, vertex).xyz;
 	float3 viewN = mul ((float3x3)UNITY_MATRIX_IT_MV, normal);
 	float3 lightColor = UNITY_LIGHTMODEL_AMBIENT.xyz;
-	#if UNITY_HAS_LIGHT_PARAMETERS
 	for (int i = 0; i < 4; i++) {
-		float3 toLight = glstate.light[i].position.xyz - viewpos.xyz * glstate.light[i].position.w;
+		float3 toLight = unity_LightPosition[i].xyz - viewpos.xyz * unity_LightPosition[i].w;
 		float lengthSq = dot(toLight, toLight);
-		float atten = 1.0 / (1.0 + lengthSq * glstate.light[i].attenuation.z);
+		float atten = 1.0 / (1.0 + lengthSq * unity_LightAtten[i].z);
 		float diff = max (0, dot (viewN, normalize(toLight)));
-		lightColor += glstate.light[i].diffuse.rgb * (diff * atten);
+		lightColor += unity_LightColor[i].rgb * (diff * atten);
 	}
-	#endif
 	return lightColor;
 }
 
@@ -272,7 +271,7 @@ inline fixed Luminance( fixed3 c )
 // - RGBM encoded with range [0;8] on other platforms using surface shaders
 inline fixed3 DecodeLightmap( fixed4 color )
 {
-#ifdef SHADER_API_GLES
+#if defined(SHADER_API_GLES) && defined(SHADER_API_MOBILE)
 	return 2.0 * color.rgb;
 #else
 	// potentially faster to do the scalar multiplication
@@ -387,7 +386,7 @@ inline fixed3 UnpackNormalDXT5nm (fixed4 packednormal)
 
 inline fixed3 UnpackNormal(fixed4 packednormal)
 {
-#ifdef SHADER_API_GLES
+#if defined(SHADER_API_GLES) && defined(SHADER_API_MOBILE)
 	return packednormal.xyz * 2 - 1;
 #else
 	fixed3 normal;
@@ -438,33 +437,27 @@ inline float4 ComputeScreenPos (float4 pos) {
 	return o;
 }
 
-// on GLES platforms (mobiles) we account for orientation by rotating projection matrix
-// so usual trick won't work
+inline float4 ComputeGrabScreenPos (float4 pos) {
+	#if UNITY_UV_STARTS_AT_TOP
+	float scale = -1.0;
+	#else
+	float scale = 1.0;
+	#endif
+	float4 o = pos * 0.5f;
+	o.xy = float2(o.x, o.y*scale) + o.w;
+	o.zw = pos.zw;
+	return o;
+}
+
 
 inline float2 TransformViewToProjection (float2 v) {
-	float2 o;
-#ifdef SHADER_API_GLES
-	o.x = dot( v, float2(UNITY_MATRIX_P[0][0],UNITY_MATRIX_P[0][1]) );
-	o.y = dot( v, float2(UNITY_MATRIX_P[1][0],UNITY_MATRIX_P[1][1]) );
-#else
-	o.x = v.x*UNITY_MATRIX_P[0][0];
-	o.y = v.y*UNITY_MATRIX_P[1][1];
-#endif
-	return o;
+	return float2(v.x*UNITY_MATRIX_P[0][0], v.y*UNITY_MATRIX_P[1][1]);
 }
 
 inline float3 TransformViewToProjection (float3 v) {
-	float3 o;
-#ifdef SHADER_API_GLES
-	o.x = dot( v.xy, float2(UNITY_MATRIX_P[0][0],UNITY_MATRIX_P[0][1]) );
-	o.y = dot( v.xy, float2(UNITY_MATRIX_P[1][0],UNITY_MATRIX_P[1][1]) );
-#else
-	o.x = v.x*UNITY_MATRIX_P[0][0];
-	o.y = v.y*UNITY_MATRIX_P[1][1];
-#endif
-	o.z = v.z * UNITY_MATRIX_P[2][2];
-	return o;
+	return float3(v.x*UNITY_MATRIX_P[0][0], v.y*UNITY_MATRIX_P[1][1], v.z*UNITY_MATRIX_P[2][2]);
 }
+
 
 
 
@@ -479,11 +472,13 @@ float4 unity_LightShadowBias;
 #else
 	#if defined(UNITY_MIGHT_NOT_HAVE_DEPTH_TEXTURE)
 	#define V2F_SHADOW_CASTER float4 pos : SV_POSITION; float4 hpos : TEXCOORD0
-	#define TRANSFER_SHADOW_CASTER(o) o.pos = mul(UNITY_MATRIX_MVP, v.vertex); o.pos.z += unity_LightShadowBias.x; if( o.pos.z < 0.0 ) o.pos.z = 0.0; o.hpos = o.pos;
+	#define TRANSFER_SHADOW_CASTER(o) o.pos = mul(UNITY_MATRIX_MVP, v.vertex); o.pos.z += unity_LightShadowBias.x; \
+	float clamped = max(o.pos.z, 0.0); o.pos.z = lerp(o.pos.z, clamped, unity_LightShadowBias.y); o.hpos = o.pos;
 	#define SHADOW_CASTER_FRAGMENT(i) return i.hpos.z / i.hpos.w;
 	#else
 	#define V2F_SHADOW_CASTER float4 pos : SV_POSITION
-	#define TRANSFER_SHADOW_CASTER(o) o.pos = mul(UNITY_MATRIX_MVP, v.vertex); o.pos.z += unity_LightShadowBias.x; if( o.pos.z < -o.pos.w ) o.pos.z = -o.pos.w;
+	#define TRANSFER_SHADOW_CASTER(o) o.pos = mul(UNITY_MATRIX_MVP, v.vertex); o.pos.z += unity_LightShadowBias.x; \
+	float clamped = max(o.pos.z, -o.pos.w); o.pos.z = lerp(o.pos.z, clamped, unity_LightShadowBias.y);
 	#define SHADOW_CASTER_FRAGMENT(i) return 0;
 	#endif
 #endif
@@ -491,50 +486,72 @@ float4 unity_LightShadowBias;
 // Shadow collector pass helpers
 #ifdef SHADOW_COLLECTOR_PASS
 
+// Keeping these for compatibility
 uniform float4x4 _World2Shadow;
 uniform float4x4 _World2Shadow1;
 uniform float4x4 _World2Shadow2;
 uniform float4x4 _World2Shadow3;
+
+uniform float4x4 unity_World2Shadow[4];
 uniform float4 _LightShadowData;
 
-#define V2F_SHADOW_COLLECTOR float4 pos : SV_POSITION; float3 _ShadowCoord0 : TEXCOORD0; float3 _ShadowCoord1 : TEXCOORD1; float3 _ShadowCoord2 : TEXCOORD2; float3 _ShadowCoord3 : TEXCOORD3; float2 _ShadowZFade : TEXCOORD4
+#define V2F_SHADOW_COLLECTOR float4 pos : SV_POSITION; float3 _ShadowCoord0 : TEXCOORD0; float3 _ShadowCoord1 : TEXCOORD1; float3 _ShadowCoord2 : TEXCOORD2; float3 _ShadowCoord3 : TEXCOORD3; float4 _WorldPosViewZ : TEXCOORD4
 #define TRANSFER_SHADOW_COLLECTOR(o)	\
 	o.pos = mul(UNITY_MATRIX_MVP, v.vertex); \
-	float z = -mul( UNITY_MATRIX_MV, v.vertex ).z; \
-	o._ShadowZFade.x = z; \
-	o._ShadowZFade.y = z * _LightShadowData.z + _LightShadowData.w; \
 	float4 wpos = mul(_Object2World, v.vertex); \
-	o._ShadowCoord0 = mul(_World2Shadow ,wpos).xyz; \
-	o._ShadowCoord1 = mul(_World2Shadow1,wpos).xyz; \
-	o._ShadowCoord2 = mul(_World2Shadow2,wpos).xyz; \
-	o._ShadowCoord3 = mul(_World2Shadow3,wpos).xyz;
+	o._WorldPosViewZ.xyz = wpos; \
+	o._WorldPosViewZ.w = -mul( UNITY_MATRIX_MV, v.vertex ).z; \
+	o._ShadowCoord0 = mul(unity_World2Shadow[0], wpos).xyz; \
+	o._ShadowCoord1 = mul(unity_World2Shadow[1], wpos).xyz; \
+	o._ShadowCoord2 = mul(unity_World2Shadow[2], wpos).xyz; \
+	o._ShadowCoord3 = mul(unity_World2Shadow[3], wpos).xyz;
 
 uniform float4 _LightSplitsNear;
 uniform float4 _LightSplitsFar;
+uniform float4 unity_ShadowFadeCenterAndType;
+uniform float4 unity_ShadowSplitSpheres[4];
+uniform float4 unity_ShadowSplitSqRadii;
 sampler2D _ShadowMapTexture;
 
 #if defined (SHADOWS_NATIVE)
-	#define SAMPLE_SHADOW_COLLECTOR_SHADOW(i) \
+	#define SAMPLE_SHADOW_COLLECTOR_SHADOW(coord) \
 	half shadow = tex2Dproj( _ShadowMapTexture, UNITY_PROJ_COORD(coord) ).r; \
 	shadow = _LightShadowData.r + shadow * (1-_LightShadowData.r);
 #else
-	#define SAMPLE_SHADOW_COLLECTOR_SHADOW(i) \
+	#define SAMPLE_SHADOW_COLLECTOR_SHADOW(coord) \
 	float shadow = tex2D( _ShadowMapTexture, coord.xy ).r < coord.z ? _LightShadowData.r : 1.0;
 #endif
 
-#define SHADOW_COLLECTOR_FRAGMENT(i) \
-	float4 z = i._ShadowZFade.x; \
-	float4 near = float4( z >= _LightSplitsNear ); \
-	float4 far = float4( z < _LightSplitsFar ); \
-	float4 weights = near * far; \
+#define COMPUTE_SHADOW_COLLECTOR_SHADOW(i, weights, shadowFade) \
 	float4 coord = float4(i._ShadowCoord0 * weights[0] + i._ShadowCoord1 * weights[1] + i._ShadowCoord2 * weights[2] + i._ShadowCoord3 * weights[3], 1); \
-	SAMPLE_SHADOW_COLLECTOR_SHADOW(i) \
-	half faded = saturate(shadow + saturate(i._ShadowZFade.y)); \
+	SAMPLE_SHADOW_COLLECTOR_SHADOW(coord) \
 	float4 res; \
-	res.x = faded; \
+	res.x = saturate(shadow + shadowFade); \
 	res.y = 1.0; \
-	res.zw = EncodeFloatRG (1 - z * _ProjectionParams.w); \
-	return res;
+	res.zw = EncodeFloatRG (1 - i._WorldPosViewZ.w * _ProjectionParams.w); \
+	return res;	
+
+#if defined (SHADOWS_SPLIT_SPHERES)
+#define SHADOW_COLLECTOR_FRAGMENT(i) \
+	float3 fromCenter0 = i._WorldPosViewZ.xyz - unity_ShadowSplitSpheres[0].xyz; \
+	float3 fromCenter1 = i._WorldPosViewZ.xyz - unity_ShadowSplitSpheres[1].xyz; \
+	float3 fromCenter2 = i._WorldPosViewZ.xyz - unity_ShadowSplitSpheres[2].xyz; \
+	float3 fromCenter3 = i._WorldPosViewZ.xyz - unity_ShadowSplitSpheres[3].xyz; \
+	float4 distances2 = float4(dot(fromCenter0,fromCenter0), dot(fromCenter1,fromCenter1), dot(fromCenter2,fromCenter2), dot(fromCenter3,fromCenter3)); \
+	float4 cascadeWeights = float4(distances2 < unity_ShadowSplitSqRadii); \
+	cascadeWeights.yzw = saturate(cascadeWeights.yzw - cascadeWeights.xyz); \
+	float sphereDist = distance(i._WorldPosViewZ.xyz, unity_ShadowFadeCenterAndType.xyz); \
+	float shadowFade = saturate(sphereDist * _LightShadowData.z + _LightShadowData.w); \
+	COMPUTE_SHADOW_COLLECTOR_SHADOW(i, cascadeWeights, shadowFade)
+#else
+#define SHADOW_COLLECTOR_FRAGMENT(i) \
+	float4 viewZ = i._WorldPosViewZ.w; \
+	float4 zNear = float4( viewZ >= _LightSplitsNear ); \
+	float4 zFar = float4( viewZ < _LightSplitsFar ); \
+	float4 cascadeWeights = zNear * zFar; \
+	float shadowFade = saturate(i._WorldPosViewZ.w * _LightShadowData.z + _LightShadowData.w); \
+	COMPUTE_SHADOW_COLLECTOR_SHADOW(i, cascadeWeights, shadowFade)
+#endif
 	
 #endif
 

@@ -18,6 +18,7 @@ SubShader {
 		
 CGPROGRAM
 #pragma surface surf Lambert vertex:WavingGrassVert addshadow
+#pragma exclude_renderers molehill
 #include "TerrainEngine.cginc"
 
 sampler2D _MainTex;

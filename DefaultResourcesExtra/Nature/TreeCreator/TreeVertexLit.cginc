@@ -43,11 +43,11 @@ fixed3 ShadeTranslucentLights (float4 vertex, float3 normal)
 	float3 worldPos = mul(_Object2World, vertex).xyz;
 	frontlight += Shade4PointLights (
 		unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
-		unity_LightColor0, unity_LightColor1, unity_LightColor2, unity_LightColor3,
+		unity_LightColor[0].rgb, unity_LightColor[1].rgb, unity_LightColor[2].rgb, unity_LightColor[3].rgb,
 		unity_4LightAtten0, worldPos, normal);
 	backlight += Shade4PointLights (
 		unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
-		unity_LightColor0, unity_LightColor1, unity_LightColor2, unity_LightColor3,
+		unity_LightColor[0].rgb, unity_LightColor[1].rgb, unity_LightColor[2].rgb, unity_LightColor[3].rgb,
 		unity_4LightAtten0, worldPos, -normal);
 	#endif
 	
