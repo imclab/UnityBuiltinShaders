@@ -34,6 +34,7 @@ Shader "Hidden/TerrainEngine/Soft Occlusion Leaves rendertex" {
 		}
 		
 		Pass {
+			Tags { "RequireOptions" = "SoftVegetation" }
 			CGPROGRAM
 			ENDCG
 

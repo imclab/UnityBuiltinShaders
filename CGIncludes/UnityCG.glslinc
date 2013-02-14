@@ -26,7 +26,7 @@ uniform vec4 _ProjectionParams;
 
 uniform vec4 _PPLAmbient;
 
-uniform vec3 _ObjectSpaceCameraPos;
+uniform vec4 _ObjectSpaceCameraPos;
 uniform vec4 _ObjectSpaceLightPos0;
 uniform vec4 _ModelLightColor0;
 uniform vec4 _SpecularLightColor0;

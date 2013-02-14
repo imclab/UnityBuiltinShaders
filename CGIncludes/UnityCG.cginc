@@ -17,7 +17,7 @@ uniform float4 _ProjectionParams;
 
 uniform float4 _PPLAmbient;
 
-uniform float3 _ObjectSpaceCameraPos;
+uniform float4 _ObjectSpaceCameraPos;
 uniform float4 _ObjectSpaceLightPos0;
 uniform float4 _ModelLightColor0;
 uniform float4 _SpecularLightColor0;
@@ -38,7 +38,6 @@ uniform float4 _LightPositionRange; // xyz = pos, w = 1/range
 #if defined DIRECTIONAL || defined DIRECTIONAL_COOKIE || defined POINT || defined SPOT || defined POINT_NOATT || defined POINT_COOKIE
 #define USING_LIGHT_MULTI_COMPILE
 #endif
-
 
 struct appdata_base {
     float4 vertex : POSITION;
@@ -79,7 +78,6 @@ inline float3 ObjSpaceViewDir( in float4 v )
 {
 	return _ObjectSpaceCameraPos - v.xyz;
 }
-
 
 // Declares 3x3 matrix 'rotation', filled with tangent space basis
 #define TANGENT_SPACE_ROTATION \
@@ -190,26 +188,78 @@ v2f_img vert_img( appdata_img v )
 	return o;
 }
 
+
 uniform float4 _RGBAEncodeDot;	// 1.0, 255.0, 65025.0, 160581375.0
 uniform float4 _RGBAEncodeBias;	// around -0.5/255.0, depending on hardware
 uniform float4 _RGBADecodeDot;	// 1.0, 1/255.0, 1/65025.0, 1/160581375.0
 
 
-// Encoding/decocing 0..1 floats into 8 bit RGBA
+// Encoding/decoding 0..1 floats into 8 bit/channel RGBA
 inline float4 EncodeFloatRGBA( float v )
 {
 	return frac(_RGBAEncodeDot * v) + _RGBAEncodeBias;
 }
-
-inline float DecodeFloatRGBA( float4 rgba )
+inline float DecodeFloatRGBA( float4 enc )
 {
-	return dot( rgba, _RGBADecodeDot );
+	return dot( enc, _RGBADecodeDot );
+}
+
+// Encoding/decoding 0..1 floats into 8 bit/channel RG
+inline float2 EncodeFloatRG( float v )
+{
+	float2 kEncodeMul = float2(1.0, 255.0);
+	float kEncodeBit = 1.0/255.0;
+	float2 enc = kEncodeMul * v;
+	enc = frac (enc);
+	enc.x -= enc.y * kEncodeBit;
+	return enc;
+}
+inline float DecodeFloatRG( float2 enc )
+{
+	float2 kDecodeDot = float2(1.0, 1/255.0);
+	return dot( enc, kDecodeDot );
+}
+
+
+// Encoding/decoding view space normals into 2D 0..1 vector
+inline float2 EncodeViewNormalStereo( float3 n )
+{
+	float kScale = 1.7777;
+	float2 enc;
+	enc = n.xy / (n.z+1);
+	enc /= kScale;
+	enc = enc*0.5+0.5;
+	return enc;
+}
+inline float3 DecodeViewNormalStereo( float4 enc4 )
+{
+	float kScale = 1.7777;
+	float3 nn = enc4.xyz*float3(2*kScale,2*kScale,0) + float3(-kScale,-kScale,1);
+	float g = 2.0 / dot(nn.xyz,nn.xyz);
+	float3 n;
+	n.xy = g*nn.xy;
+	n.z = g-1;
+	return n;
+}
+
+inline float4 EncodeDepthNormal( float depth, float3 normal )
+{
+	float4 enc;
+	enc.xy = EncodeViewNormalStereo (normal);
+	enc.zw = EncodeFloatRG (depth);
+	return enc;
+}
+
+inline void DecodeDepthNormal( float4 enc, out float depth, out float3 normal )
+{
+	depth = DecodeFloatRG (enc.zw);
+	normal = DecodeViewNormalStereo (enc);
 }
 
 
 uniform float4 _ZBufferParams;
 
-// z buffer to linear 0..1 depth (0 at eye, 1 at far plane)
+// Z buffer to linear 0..1 depth (0 at eye, 1 at far plane)
 inline float Linear01Depth( float z )
 {
 	return 1.0 / (_ZBufferParams.x * z + _ZBufferParams.y);
@@ -232,6 +282,8 @@ inline float LinearEyeDepth( float z )
 	#define DECODE_EYEDEPTH(i) LinearEyeDepth(i)
 #endif
 #define COMPUTE_EYEDEPTH(o) o = -mul( glstate.matrix.modelview[0], v.vertex ).z
+#define COMPUTE_DEPTH_01 -(mul( glstate.matrix.modelview[0], v.vertex ).z * _ProjectionParams.w)
+#define COMPUTE_VIEW_NORMAL mul((float3x3)glstate.matrix.invtrans.modelview[0], v.normal)
 
 
 // Shadow caster pass helpers
