@@ -6,7 +6,11 @@ Shader "Hidden/TerrainEngine/Details/BillboardWavingDoublePass" {
 		_Cutoff ("Cutoff", float) = 0.5
 	}
 	SubShader {
-		Tags { "Queue" = "Transparent" }
+		Tags {
+			"Queue" = "Transparent-101"
+			"IgnoreProjector"="True"
+			"RenderType"="GrassBillboard"
+		}
 
 		ColorMask rgb
 		Cull Off
@@ -14,6 +18,7 @@ Shader "Hidden/TerrainEngine/Details/BillboardWavingDoublePass" {
 		Pass {
 			CGPROGRAM
 			#pragma vertex BillboardVert
+			#pragma multi_compile NO_INTEL_GMA_X3100_WORKAROUND INTEL_GMA_X3100_WORKAROUND
 			#include "WavingGrass.cginc"
 			ENDCG			
 
@@ -22,8 +27,10 @@ Shader "Hidden/TerrainEngine/Details/BillboardWavingDoublePass" {
 			SetTexture [_MainTex] { combine texture * primary DOUBLE, texture }
 		}
 		Pass {
+			Tags { "RequireOptions" = "SoftVegetation" }
 			CGPROGRAM
 			#pragma vertex BillboardVert
+			#pragma multi_compile NO_INTEL_GMA_X3100_WORKAROUND INTEL_GMA_X3100_WORKAROUND
 			#include "WavingGrass.cginc"
 			ENDCG			
 

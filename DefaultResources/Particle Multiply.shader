@@ -4,7 +4,7 @@ Properties {
 }
 
 Category {
-	Tags { "Queue" = "Transparent" }
+	Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
 	Blend Zero SrcColor
 	Cull Off Lighting Off ZWrite Off Fog { Color (1,1,1,1) }
 	BindChannels {

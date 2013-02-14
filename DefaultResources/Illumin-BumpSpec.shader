@@ -7,6 +7,7 @@ Shader "Self-Illumin/Bumped Specular" {
 		_BumpMap ("Bump (RGB) Illumin (A)", 2D) = "bump" {}
 	}
 	SubShader {
+		Tags { "RenderType"="Opaque" }
 		UsePass "Self-Illumin/VertexLit/BASE"
 		UsePass "Bumped Specular/PPL"
 	}

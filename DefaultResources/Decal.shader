@@ -9,6 +9,7 @@ Properties {
 }
 
 SubShader {
+	Tags { "RenderType"="Opaque" }
 	Material {
 		Diffuse [_Color]
 		Ambient [_Color]

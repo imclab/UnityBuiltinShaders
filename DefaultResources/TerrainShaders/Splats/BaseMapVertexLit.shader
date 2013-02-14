@@ -4,7 +4,11 @@ Properties {
 	_BaseMap ("BaseMap (RGB)", 2D) = "white" {}
 }
 SubShader {
-	Tags { "SplatCount" = "0" }
+	Tags {
+		"SplatCount" = "0"
+		"Queue" = "Geometry-100"
+		"RenderType" = "Opaque"
+	}
 	Pass {
 		Tags {"LightMode" = "Always" }
 		Material {
@@ -15,5 +19,6 @@ SubShader {
 		
 		SetTexture [_BaseMap] { combine texture * primary DOUBLE }
 	}
+	UsePass "VertexLit/SHADOWCASTER"
 }
 }

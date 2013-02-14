@@ -3,6 +3,7 @@ Shader "Hidden/TerrainEngine/Details/Vertexlit" {
 		_MainTex ("Main Texture", 2D) = "white" {  }
 	}
 	SubShader {
+		Tags { "RenderType"="Opaque" }
 		Pass {
 			ColorMaterial AmbientAndDiffuse
 			Lighting On

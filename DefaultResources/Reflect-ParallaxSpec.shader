@@ -10,6 +10,7 @@ Properties {
 	_BumpMap ("Bumpmap (RGB) Height (A)", 2D) = "bump" { }
 }
 Category {
+	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
 	

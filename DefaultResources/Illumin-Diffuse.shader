@@ -5,6 +5,7 @@ Shader "Self-Illumin/Diffuse" {
 		_BumpMap ("Illumin (A)", 2D) = "bump" {}
 	}
 	SubShader {
+		Tags { "RenderType"="Opaque" }
 		UsePass "Self-Illumin/VertexLit/BASE"
 		UsePass "Diffuse/PPL"
 	} 

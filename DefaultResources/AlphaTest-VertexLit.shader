@@ -9,6 +9,7 @@ Properties {
 }
 
 SubShader {
+	Tags {"IgnoreProjector"="True" "RenderType"="TransparentCutout"}
 	Pass {
 		Alphatest Greater [_Cutoff]
 		AlphaToMask True
@@ -60,11 +61,12 @@ v2f vert( appdata_base v )
 
 uniform sampler2D _MainTex;
 uniform float _Cutoff;
+uniform float4 _Color;
 
 float4 frag( v2f i ) : COLOR
 {
 	half4 texcol = tex2D( _MainTex, i.uv );
-	clip( texcol.a - _Cutoff );
+	clip( texcol.a*_Color.a - _Cutoff );
 	
 	SHADOW_CASTER_FRAGMENT(i)
 }
@@ -105,11 +107,12 @@ v2f vert (appdata_base v)
 
 uniform sampler2D _MainTex;
 uniform float _Cutoff;
+uniform float4 _Color;
 
 half4 frag (v2f i) : COLOR
 {
 	half4 texcol = tex2D( _MainTex, i.uv );
-	clip( texcol.a - _Cutoff );
+	clip( texcol.a*_Color.a - _Cutoff );
 	
 	SHADOW_COLLECTOR_FRAGMENT(i)
 }

@@ -1,4 +1,4 @@
-Shader "Hidden/TerrainEngine/Splatmap/Lightmap-BaseMap" {
+Shader "Hidden/TerrainEngine/Splatmap/Realtime-BaseMap" {
 Properties {
 	_LightMap ("LightMap (RGB)", 2D) = "white" {}
 	_BaseMap ("BaseMap (RGB)", 2D) = "white" {}

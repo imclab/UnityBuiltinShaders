@@ -5,7 +5,7 @@ Properties {
 }
 
 SubShader {
-	Tags { "Queue" = "Transparent" }
+	Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
 	Cull Off
 	Lighting On
 	Material { Emission [_EmisColor] }

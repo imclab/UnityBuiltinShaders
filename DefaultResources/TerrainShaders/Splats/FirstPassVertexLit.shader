@@ -12,15 +12,19 @@ Properties {
 Category {
 	// Fragment program, 4 splats per pass
 	SubShader {		
-		Tags { "SplatCount" = "4" }
+		Tags {
+			"SplatCount" = "4"
+			"Queue" = "Geometry-100"
+			"RenderType" = "Opaque"
+		}
 		Pass {
 			Tags { "LightMode" = "Always" }
+			
 			CGPROGRAM
 			#pragma vertex VertexlitSplatVertex
 			#pragma fragment VertexlitSplatFragment
 			#pragma fragmentoption ARB_fog_exp2
 			#pragma fragmentoption ARB_precision_hint_fastest
-			#define TEXTURECOUNT 4
 
 			#include "splatting.cginc"
 			ENDCG
@@ -29,7 +33,11 @@ Category {
  	
  	// ATI texture shader, 4 splats per pass
 	SubShader {		
-		Tags { "SplatCount" = "4" }
+		Tags {
+			"SplatCount" = "4"
+			"Queue" = "Geometry-100"
+			"RenderType" = "Opaque"
+		}
 		Pass {
 			Tags { "LightMode" = "Always" }
 			Material {

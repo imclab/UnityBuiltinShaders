@@ -1,17 +1,10 @@
 #include "UnityCG.cginc"
+#include "TerrainEngine.cginc"
 
-struct appdata {
-    float4 vertex : POSITION;
-    float4 tangent : TANGENT;
-    float3 normal : NORMAL;
-    float4 color : COLOR;
-    float4 texcoord : TEXCOORD0;
-};
+
 uniform float _Occlusion, _AO, _BaseLight;
 uniform float4 _Color;
-uniform float4 _Scale;
 uniform float3[4] _TerrainTreeLightDirections;
-uniform float4x4 _TerrainEngineBendTree;
 
 struct v2f {
 	float4 pos : POSITION;
@@ -20,15 +13,18 @@ struct v2f {
 	float4 color : COLOR0;
 };
 
-v2f leaves(appdata v) {
+uniform float4x4 _CameraToWorld;
+
+// original: 56 instructions
+// point lights: 93 instructions
+v2f leaves(appdata_tree v)
+{
 	v2f o;
-	// Calc vertex position
-	float4 vertex = v.vertex * _Scale;
-	float4 bent = mul(_TerrainEngineBendTree, vertex);
-	vertex = lerp(vertex, bent, v.color.w);
-	vertex.w = 1;
 	
-	o.pos = mul(glstate.matrix.mvp, vertex);
+	TerrainAnimateTree(v.vertex, v.color.w);
+	
+	float3 viewpos = mul(glstate.matrix.modelview[0], v.vertex).xyz;
+	o.pos = mul(glstate.matrix.mvp, v.vertex);
 	o.fog = o.pos.z;
 	o.uv = v.texcoord;
 	
@@ -39,14 +35,20 @@ v2f leaves(appdata v) {
 	for (int i = 0; i < 4; i++) {
 		#ifdef USE_CUSTOM_LIGHT_DIR
 		lightDir.xyz = _TerrainTreeLightDirections[i];
+		float atten = 1.0;
 		#else
-		lightDir.xyz = mul ( glstate.light[i].position.xyz, (float3x3)glstate.matrix.invtrans.modelview[0]);
+		float3 toLight = glstate.light[i].position.xyz - viewpos.xyz * glstate.light[i].position.w;
+		toLight.yz *= -1.0;
+		lightDir.xyz = mul( (float3x3)_CameraToWorld, normalize(toLight) );
+		float lengthSq = dot(toLight, toLight);
+		float atten = 1.0 / (1.0 + lengthSq * glstate.light[i].attenuation.z);		
 		#endif
 
 		lightDir.xyz *= _Occlusion;
 		float occ =  dot (v.tangent, lightDir);
 		occ = max(0, occ);
 		occ += _BaseLight;
+		occ *= atten;
 		lightColor += glstate.light[i].diffuse * occ;
 	}
 
@@ -60,15 +62,16 @@ v2f leaves(appdata v) {
 	return o; 
 }
 
-v2f bark(appdata v) {
-	v2f o;
-	// Calc vertex position
-	float4 vertex = v.vertex * _Scale;
-	float4 bent = mul(_TerrainEngineBendTree, vertex);
-	vertex = lerp(vertex, bent, v.color.w);
-	vertex.w = 1;
 
-	o.pos = mul(glstate.matrix.mvp, vertex);
+// original: 50 instructions
+// point lights: 87 instructions
+v2f bark(appdata_tree v) {
+	v2f o;
+	
+	TerrainAnimateTree(v.vertex, v.color.w);
+	
+	float3 viewpos = mul(glstate.matrix.modelview[0], v.vertex).xyz;
+	o.pos = mul(glstate.matrix.mvp, v.vertex);
 	o.fog = o.pos.z;
 	o.uv = v.texcoord;
 	
@@ -79,12 +82,18 @@ v2f bark(appdata v) {
 	for (int i = 0; i < 4; i++) {
 		#ifdef USE_CUSTOM_LIGHT_DIR
 		lightDir.xyz = _TerrainTreeLightDirections[i];
+		float atten = 1.0;
 		#else
-		lightDir.xyz = mul ( glstate.light[i].position.xyz, (float3x3)glstate.matrix.invtrans.modelview[0]);
+		float3 toLight = glstate.light[i].position.xyz - viewpos.xyz * glstate.light[i].position.w;
+		toLight.yz *= -1.0;
+		lightDir.xyz = mul( (float3x3)_CameraToWorld, normalize(toLight) );
+		float lengthSq = dot(toLight, toLight);
+		float atten = 1.0 / (1.0 + lengthSq * glstate.light[i].attenuation.z);		
 		#endif
 		float occ = dot (lightDir.xyz, v.normal);
 		occ = max(0, occ);
-		occ *=  _AO * v.tangent.w + _BaseLight;		
+		occ *=  _AO * v.tangent.w + _BaseLight;
+		occ *= atten;
 		lightColor += glstate.light[i].diffuse * occ;
 	}
 	

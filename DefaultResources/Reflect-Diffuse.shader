@@ -6,6 +6,7 @@ Shader "Reflective/Diffuse" {
 		_Cube ("Reflection Cubemap", Cube) = "_Skybox" { TexGen CubeReflect }
 	}
 	SubShader {
+		Tags { "RenderType"="Opaque" }
 		UsePass "Reflective/VertexLit/BASE"
 		UsePass "Diffuse/PPL"
 	} 

@@ -3,7 +3,7 @@ Properties {
 	_MainTex ("Particle Texture", 2D) = "black" {}
 }
 SubShader {
-	Tags { "Queue" = "Transparent" }
+	Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
 	Cull off
 	Lighting Off
 	ZWrite off

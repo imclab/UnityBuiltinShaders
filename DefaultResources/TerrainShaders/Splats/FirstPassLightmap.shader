@@ -12,7 +12,11 @@ Properties {
 Category {
 	// Fragment program, 4 splats per pass
 	SubShader {
-		Tags { "SplatCount" = "4" }
+		Tags {
+			"SplatCount" = "4"
+			"Queue" = "Geometry-100"
+			"RenderType" = "Opaque"
+		}
 		Pass {
 			Tags { "LightMode" = "Always" }
 			CGPROGRAM
@@ -29,7 +33,11 @@ Category {
 	
  	// ATI texture shader, 4 splats per pass
 	SubShader {		
-		Tags { "SplatCount" = "4" }
+		Tags {
+			"SplatCount" = "4"
+			"Queue" = "Geometry-100"
+			"RenderType" = "Opaque"
+		}
 		Pass {
 			Tags { "LightMode" = "Always" }
 			

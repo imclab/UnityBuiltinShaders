@@ -11,6 +11,7 @@ Properties {
 // Dual texture cards
 
 SubShader {
+	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
 	

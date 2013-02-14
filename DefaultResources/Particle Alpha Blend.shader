@@ -5,7 +5,7 @@ Properties {
 }
 
 Category {
-	Tags { "Queue" = "Transparent" }
+	Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
 	Blend SrcAlpha OneMinusSrcAlpha
 	AlphaTest Greater .01
 	ColorMask RGB

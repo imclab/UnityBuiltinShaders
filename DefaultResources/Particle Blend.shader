@@ -4,7 +4,7 @@ Properties {
 }
 
 SubShader {
-	Tags { "Queue" = "Transparent" }
+	Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
 	Blend DstColor One
 	ColorMask RGB
 	Cull Off Lighting Off ZWrite Off Fog { Color (0,0,0,0) }

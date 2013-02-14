@@ -9,7 +9,11 @@ uniform vec4 _Time;
 uniform vec4 _SinTime;
 uniform vec4 _CosTime;
 
-uniform vec4 _ProjectionParams; // x = 1 or -1 (-1 if projection is flipped)
+// x = 1 or -1 (-1 if projection is flipped)
+// y = near plane
+// z = far plane
+// w = 1/far plane
+uniform vec4 _ProjectionParams;
 
 uniform vec4 _PPLAmbient;
 
@@ -134,9 +138,9 @@ float Luminance( vec3 c )
 }
 
 
-uniform vec4 _RGBAEncodeDot;	// normally 1.0, 255.0, 65025.0, 160581375.0
-uniform vec4 _RGBAEncodeBias;	// normally +0.5/255.0; on ATI cards -0.55/255.0
-uniform vec4 _RGBADecodeDot;	// normally 1.0, 1/255.0, 1/65025.0, 1/160581375.0
+uniform vec4 _RGBAEncodeDot;	// 1.0, 255.0, 65025.0, 160581375.0
+uniform vec4 _RGBAEncodeBias;	// around -0.5/255.0, depending on hardware
+uniform vec4 _RGBADecodeDot;	// 1.0, 1/255.0, 1/65025.0, 1/160581375.0
 
 // Encoding/decocing 0..1 floats into 8 bit RGBA
 vec4 EncodeFloatRGBA( float v )

@@ -8,6 +8,8 @@ Properties {
 }
 
 SubShader {
+	Tags { "RenderType"="Opaque" }
+	
 	// Normal rendering pass
 	Pass {
 		Material {

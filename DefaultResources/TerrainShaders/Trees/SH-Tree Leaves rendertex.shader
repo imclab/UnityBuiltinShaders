@@ -15,7 +15,7 @@ Shader "Hidden/TerrainEngine/Soft Occlusion Leaves rendertex" {
 		#include "SH_Vertex.cginc"
 		ENDCG
 
-		Tags { "Queue" = "Transparent" }
+		Tags { "Queue" = "Transparent-99" }
 		Cull Off
 		Fog { Mode Off}
 		

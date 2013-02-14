@@ -8,8 +8,9 @@ Shader "Nature/Soft Occlusion Bark" {
 	}
 	SubShader {
 		Tags {
+			"IgnoreProjector"="True"
 			"BillboardShader" = "Hidden/TerrainEngine/Soft Occlusion Bark rendertex"
-			"TerrainCustomLit" = "Hidden/TerrainEngine/Soft Occlusion Bark customLit"
+			"RenderType" = "TreeOpaque"
 		}
 
 		Pass {
@@ -20,11 +21,52 @@ Shader "Nature/Soft Occlusion Bark" {
 						
 			SetTexture [_MainTex] { combine primary * texture DOUBLE, constant }
 		}
+		
+		// Pass to render object as a shadow caster
+		Pass {
+			Name "ShadowCaster"
+			Tags { "LightMode" = "ShadowCaster" }
+			
+			Fog {Mode Off}
+			ZWrite On ZTest Less Cull Off
+			Offset [_ShadowBias], [_ShadowBiasSlope]
+	
+			CGPROGRAM
+			#pragma vertex vert
+			#pragma fragment frag
+			#pragma multi_compile SHADOWS_NATIVE SHADOWS_CUBE
+			#pragma fragmentoption ARB_precision_hint_fastest
+			#include "UnityCG.cginc"
+			#include "TerrainEngine.cginc"
+			
+			struct v2f { 
+				V2F_SHADOW_CASTER;
+			};
+			
+			struct appdata {
+			    float4 vertex : POSITION;
+			    float4 color : COLOR;
+			};
+			v2f vert( appdata v )
+			{
+				v2f o;
+				TerrainAnimateTree(v.vertex, v.color.w);
+				TRANSFER_SHADOW_CASTER(o)
+				return o;
+			}
+			
+			float4 frag( v2f i ) : COLOR
+			{
+				SHADOW_CASTER_FRAGMENT(i)
+			}
+			ENDCG	
+		}
 	}
 	SubShader {
 		Tags {
+			"IgnoreProjector"="True"
 			"BillboardShader" = "Hidden/TerrainEngine/Soft Occlusion Bark rendertex"
-			"TerrainCustomLit" = "Hidden/TerrainEngine/Soft Occlusion Bark customLit"
+			"RenderType" = "Opaque"
 		}
 		Pass {
 			Lighting On

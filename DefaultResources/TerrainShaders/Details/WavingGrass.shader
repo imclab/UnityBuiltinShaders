@@ -6,7 +6,11 @@ Shader "Hidden/TerrainEngine/Details/WavingDoublePass" {
 		_Cutoff ("Cutoff", float) = 0.5
 	}
 	SubShader {
-		Tags { "Queue" = "Transparent" }
+		Tags {
+			"Queue" = "Transparent-101"
+			"IgnoreProjector"="True"
+			"RenderType"="Grass"
+		}
 
 		ColorMask RGB
 		Cull Off
@@ -14,6 +18,7 @@ Shader "Hidden/TerrainEngine/Details/WavingDoublePass" {
 		Pass {
 			CGPROGRAM
 			#pragma vertex vert
+			#pragma multi_compile NO_INTEL_GMA_X3100_WORKAROUND INTEL_GMA_X3100_WORKAROUND
 			#include "WavingGrass.cginc"
 			ENDCG			
 
@@ -22,8 +27,10 @@ Shader "Hidden/TerrainEngine/Details/WavingDoublePass" {
 			SetTexture [_MainTex] { combine texture * primary DOUBLE, texture * primary}
 		}
 		Pass {
+			Tags { "RequireOptions" = "SoftVegetation" }
 			CGPROGRAM
 			#pragma vertex vert
+			#pragma multi_compile NO_INTEL_GMA_X3100_WORKAROUND INTEL_GMA_X3100_WORKAROUND
 			#include "WavingGrass.cginc"
 			ENDCG			
 
@@ -40,7 +47,11 @@ Shader "Hidden/TerrainEngine/Details/WavingDoublePass" {
 		 }
 	}
 	SubShader {
-		Tags { "Queue" = "Transparent" }
+		Tags {
+			"Queue" = "Transparent-101"
+			"IgnoreProjector"="True"
+			"RenderType"="Grass"
+		}
 
 		ColorMask RGB
 		Cull Off

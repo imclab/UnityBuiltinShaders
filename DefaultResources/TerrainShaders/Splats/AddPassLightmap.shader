@@ -15,7 +15,12 @@ Category {
 	
 	// Fragment program, 4 splats per pass
 	SubShader {
-		Tags { "SplatCount" = "4" }
+		Tags {
+			"SplatCount" = "4"
+			"Queue" = "Geometry-99"
+			"IgnoreProjector"="True"
+			"RenderType" = "Transparent"
+		}
 		Pass {
 			Tags { "LightMode" = "Always" }
 			CGPROGRAM
@@ -32,7 +37,12 @@ Category {
  	
  	// ATI texture shader, 4 splats per pass
 	SubShader {
-		Tags { "SplatCount" = "4" }
+		Tags {
+			"SplatCount" = "4"
+			"Queue" = "Geometry-99"
+			"IgnoreProjector"="True"
+			"RenderType" = "Transparent"
+		}
 		Pass {
 			Tags { "LightMode" = "Always" }
 			
@@ -69,8 +79,13 @@ EndPass;
 			SetTexture [_LightMap]
 		}
 	}
+	
+	// Older cards - dummy subshader. Not actually used.
+	SubShader {
+		Pass {
+			SetTexture [_LightMap]
+		}
+ 	}
 }
-
-Fallback Off
 
 }

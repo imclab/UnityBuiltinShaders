@@ -10,7 +10,7 @@ Properties {
 }
 
 SubShader {
-	Tags { "Queue" = "Background" }
+	Tags { "Queue"="Background" "RenderType"="Background" }
 	Cull Off
 	ZWrite On
 	ZTest Always

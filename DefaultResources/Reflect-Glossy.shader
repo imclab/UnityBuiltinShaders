@@ -8,6 +8,7 @@ Shader "Reflective/Specular" {
 		_Cube ("Reflection Cubemap", Cube) = "_Skybox" { TexGen CubeReflect }
 	}
 	SubShader {
+		Tags { "RenderType"="Opaque" }
 		UsePass "Reflective/VertexLit/BASE"
 		UsePass "Specular/PPL"
 	}

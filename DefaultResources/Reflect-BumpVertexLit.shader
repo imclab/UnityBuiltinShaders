@@ -10,6 +10,7 @@ Properties {
 }
 
 Category {
+	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	SubShader {
 		Pass {

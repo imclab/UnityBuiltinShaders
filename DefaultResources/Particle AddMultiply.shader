@@ -5,7 +5,7 @@ Properties {
 }
 
 Category {
-	Tags { "Queue" = "Transparent" }
+	Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
 	Blend One OneMinusSrcAlpha
 	ColorMask RGB
 	Cull Off Lighting Off ZWrite Off Fog { Color (0,0,0,1) }

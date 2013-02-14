@@ -1,3 +1,6 @@
+#ifndef AUTOLIGHT_INCLUDED
+#define AUTOLIGHT_INCLUDED
+
 // ------------ Shadow helpers --------
 
 // -------- Native shadow maps
@@ -188,3 +191,5 @@ uniform float4x4 _SpotlightProjectionMatrix0;
 #define LIGHT_ATTENUATION(a)	(tex2D(_LightTexture0, a._LightCoord).w * SHADOW_ATTENUATION(a))
 #endif
 
+
+#endif

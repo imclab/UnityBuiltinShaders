@@ -5,9 +5,10 @@ Shader "Lightmapped/Bumped Specular" {
 		_Shininess ("Shininess", Range (0.01, 1)) = 0.078125
 		_MainTex ("Base (RGB) Gloss (A)", 2D) = "white" {}
 		_BumpMap ("Bump (RGB)", 2D) = "bump" {}
-		_LightMap ("Lightmap (RGB)", 2D) = "black" {}
+		_LightMap ("Lightmap (RGB)", 2D) = "lightmap" { LightmapMode }
 	}
 	SubShader {
+		Tags { "RenderType"="Opaque" }
 		UsePass "Lightmapped/VertexLit/BASE"
 		UsePass "Bumped Specular/PPL"
 	}

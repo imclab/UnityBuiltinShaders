@@ -9,7 +9,11 @@ uniform float4 _Time;
 uniform float4 _SinTime;
 uniform float4 _CosTime;
 
-uniform float4 _ProjectionParams; // x = 1 or -1 (-1 if projection is flipped)
+// x = 1 or -1 (-1 if projection is flipped)
+// y = near plane
+// z = far plane
+// w = 1/far plane
+uniform float4 _ProjectionParams;
 
 uniform float4 _PPLAmbient;
 
@@ -186,9 +190,9 @@ v2f_img vert_img( appdata_img v )
 	return o;
 }
 
-uniform float4 _RGBAEncodeDot;	// normally 1.0, 255.0, 65025.0, 160581375.0
-uniform float4 _RGBAEncodeBias;	// normally +0.5/255.0; on ATI cards -0.55/255.0
-uniform float4 _RGBADecodeDot;	// normally 1.0, 1/255.0, 1/65025.0, 1/160581375.0
+uniform float4 _RGBAEncodeDot;	// 1.0, 255.0, 65025.0, 160581375.0
+uniform float4 _RGBAEncodeBias;	// around -0.5/255.0, depending on hardware
+uniform float4 _RGBADecodeDot;	// 1.0, 1/255.0, 1/65025.0, 1/160581375.0
 
 
 // Encoding/decocing 0..1 floats into 8 bit RGBA
@@ -203,6 +207,33 @@ inline float DecodeFloatRGBA( float4 rgba )
 }
 
 
+uniform float4 _ZBufferParams;
+
+// z buffer to linear 0..1 depth (0 at eye, 1 at far plane)
+inline float Linear01Depth( float z )
+{
+	return 1.0 / (_ZBufferParams.x * z + _ZBufferParams.y);
+}
+// Z buffer to linear depth
+inline float LinearEyeDepth( float z )
+{
+	return 1.0 / (_ZBufferParams.z * z + _ZBufferParams.w);
+}
+
+
+// Depth render texture helpers
+#ifdef SHADER_API_D3D9
+	#define TRANSFER_EYEDEPTH(o) o = -(mul( glstate.matrix.modelview[0], v.vertex ).z * _ProjectionParams.w)
+	#define OUTPUT_EYEDEPTH(i) return i
+	#define DECODE_EYEDEPTH(i) (i * _ProjectionParams.z)
+#else
+	#define TRANSFER_EYEDEPTH(o) 
+	#define OUTPUT_EYEDEPTH(i) return 0
+	#define DECODE_EYEDEPTH(i) LinearEyeDepth(i)
+#endif
+#define COMPUTE_EYEDEPTH(o) o = -mul( glstate.matrix.modelview[0], v.vertex ).z
+
+
 // Shadow caster pass helpers
 
 #ifdef SHADOWS_CUBE
@@ -212,11 +243,11 @@ inline float DecodeFloatRGBA( float4 rgba )
 #else
 	#ifdef SHADER_API_D3D9
 	#define V2F_SHADOW_CASTER float4 pos : POSITION; float4 hpos
-	#define TRANSFER_SHADOW_CASTER(o) v.vertex.xyz += _LightDirectionBias.xyz * _LightDirectionBias.w; o.pos = mul(glstate.matrix.mvp, v.vertex); o.hpos = o.pos;
+	#define TRANSFER_SHADOW_CASTER(o) v.vertex.xyz += _LightDirectionBias.xyz * _LightDirectionBias.w; o.pos = mul(glstate.matrix.mvp, v.vertex); if( o.pos.z < 0.0 ) o.pos.z = 0.0; o.hpos = o.pos;
 	#define SHADOW_CASTER_FRAGMENT(i) return i.hpos.z / i.hpos.w;
 	#else
 	#define V2F_SHADOW_CASTER float4 pos : POSITION
-	#define TRANSFER_SHADOW_CASTER(o) v.vertex.xyz += _LightDirectionBias.xyz * _LightDirectionBias.w; o.pos = mul(glstate.matrix.mvp, v.vertex);
+	#define TRANSFER_SHADOW_CASTER(o) v.vertex.xyz += _LightDirectionBias.xyz * _LightDirectionBias.w; o.pos = mul(glstate.matrix.mvp, v.vertex); if( o.pos.z < -o.pos.w ) o.pos.z = -o.pos.w;
 	#define SHADOW_CASTER_FRAGMENT(i) return 0;
 	#endif
 #endif

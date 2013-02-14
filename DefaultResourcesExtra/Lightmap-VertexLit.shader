@@ -4,13 +4,14 @@ Properties {
 	_SpecColor ("Spec Color", Color) = (1,1,1,1)
 	_Shininess ("Shininess", Range (0.01, 1)) = 0.7
 	_MainTex ("Base (RGB)", 2D) = "white" {}
-	_LightMap ("Lightmap (RGB)", 2D) = "black" {}
+	_LightMap ("Lightmap (RGB)", 2D) = "lightmap" { LightmapMode }
 }
 
 // ------------------------------------------------------------------
 // Three texture cards (Radeons, GeForce3/4Ti and up)
 
 SubShader {
+	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
 
@@ -74,6 +75,7 @@ SubShader {
 // Dual texture cards - draw in two passes
 
 SubShader {
+	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
 
@@ -122,6 +124,7 @@ SubShader {
 // Single texture cards - lightmap and texture in two passes; no lighting
 
 SubShader {
+	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
 
