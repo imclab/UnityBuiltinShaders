@@ -26,6 +26,10 @@ uniform float4 _ProjectionParams;
 // w = 1 + 1.0/height
 uniform float4 _ScreenParams;
 
+#if SHADER_API_FLASH
+uniform float4 unity_NPOTScale;
+#endif
+
 // w = 1 / uniform scale
 uniform float4 unity_Scale;
 
@@ -43,11 +47,13 @@ uniform float4 _LightPositionRange; // xyz = pos, w = 1/range
 
 #if defined(SHADER_API_PS3)
 #	define UNITY_SAMPLE_DEPTH(value) (dot((value).wxy, float3(0.996093809371817670572857294849, 0.0038909914428586627756752238080039, 1.5199185323666651467481343000015e-5)))
+#elif defined(SHADER_API_FLASH)
+#	define UNITY_SAMPLE_DEPTH(value) (DecodeFloatRGBA(value))
 #else
 #	define UNITY_SAMPLE_DEPTH(value) (value).r
 #endif
 
-
+uniform fixed4 unity_ColorSpaceGrey;
 
 // -------------------------------------------------------------------
 //  helper functions and macros used in many standard shaders
@@ -79,6 +85,12 @@ struct appdata_full {
     float4 texcoord : TEXCOORD0;
     float4 texcoord1 : TEXCOORD1;
     fixed4 color : COLOR;
+#if defined(SHADER_API_XBOX360)
+	half4 texcoord2 : TEXCOORD2;
+	half4 texcoord3 : TEXCOORD3;
+	half4 texcoord4 : TEXCOORD4;
+	half4 texcoord5 : TEXCOORD5;
+#endif
 };
 
 // Computes world space light direction
@@ -413,7 +425,11 @@ inline float LinearEyeDepth( float z )
 // Depth render texture helpers
 #if defined(UNITY_MIGHT_NOT_HAVE_DEPTH_TEXTURE)
 	#define UNITY_TRANSFER_DEPTH(oo) oo = o.pos.zw
+	#if SHADER_API_FLASH
+	#define UNITY_OUTPUT_DEPTH(i) return EncodeFloatRGBA(i.x/i.y)
+	#else
 	#define UNITY_OUTPUT_DEPTH(i) return i.x/i.y
+	#endif
 #else
 	#define UNITY_TRANSFER_DEPTH(oo) 
 	#define UNITY_OUTPUT_DEPTH(i) return 0
@@ -433,6 +449,11 @@ inline float4 ComputeScreenPos (float4 pos) {
 	#else
 	o.xy = float2(o.x, o.y*_ProjectionParams.x) + o.w;
 	#endif
+	
+	#if defined(SHADER_API_FLASH)
+	o.xy *= unity_NPOTScale.xy;
+	#endif
+	
 	o.zw = pos.zw;
 	return o;
 }
@@ -474,13 +495,12 @@ float4 unity_LightShadowBias;
 	#define V2F_SHADOW_CASTER float4 pos : SV_POSITION; float4 hpos : TEXCOORD0
 	#define TRANSFER_SHADOW_CASTER(o) o.pos = mul(UNITY_MATRIX_MVP, v.vertex); o.pos.z += unity_LightShadowBias.x; \
 	float clamped = max(o.pos.z, 0.0); o.pos.z = lerp(o.pos.z, clamped, unity_LightShadowBias.y); o.hpos = o.pos;
-	#define SHADOW_CASTER_FRAGMENT(i) return i.hpos.z / i.hpos.w;
 	#else
 	#define V2F_SHADOW_CASTER float4 pos : SV_POSITION
 	#define TRANSFER_SHADOW_CASTER(o) o.pos = mul(UNITY_MATRIX_MVP, v.vertex); o.pos.z += unity_LightShadowBias.x; \
 	float clamped = max(o.pos.z, -o.pos.w); o.pos.z = lerp(o.pos.z, clamped, unity_LightShadowBias.y);
-	#define SHADOW_CASTER_FRAGMENT(i) return 0;
 	#endif
+	#define SHADOW_CASTER_FRAGMENT(i) UNITY_OUTPUT_DEPTH(i.hpos.zw);
 #endif
 
 // Shadow collector pass helpers
@@ -519,7 +539,7 @@ sampler2D _ShadowMapTexture;
 	shadow = _LightShadowData.r + shadow * (1-_LightShadowData.r);
 #else
 	#define SAMPLE_SHADOW_COLLECTOR_SHADOW(coord) \
-	float shadow = tex2D( _ShadowMapTexture, coord.xy ).r < coord.z ? _LightShadowData.r : 1.0;
+	float shadow = UNITY_SAMPLE_DEPTH(tex2D( _ShadowMapTexture, coord.xy )) < coord.z ? _LightShadowData.r : 1.0;
 #endif
 
 #define COMPUTE_SHADOW_COLLECTOR_SHADOW(i, weights, shadowFade) \

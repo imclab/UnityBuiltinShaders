@@ -111,13 +111,13 @@ float4	 glstate_lightmodel_ambient;
 #define UNITY_HALF_TEXEL_OFFSET
 #endif
 
-#if defined(SHADER_API_D3D9) || defined(SHADER_API_XBOX360) || defined(SHADER_API_PS3)
+#if defined(SHADER_API_D3D9) || defined(SHADER_API_XBOX360) || defined(SHADER_API_PS3) || defined(SHADER_API_FLASH)
 #define UNITY_UV_STARTS_AT_TOP 1
 #else
 #define UNITY_UV_STARTS_AT_TOP 0
 #endif
 
-#if defined(SHADER_API_D3D9)
+#if defined(SHADER_API_D3D9) || defined (SHADER_API_FLASH)
 #define UNITY_MIGHT_NOT_HAVE_DEPTH_TEXTURE
 #endif
 
