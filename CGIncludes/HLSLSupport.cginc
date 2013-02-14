@@ -1,6 +1,17 @@
 #ifndef HLSL_SUPPORT_INCLUDED
 #define HLSL_SUPPORT_INCLUDED
 
+#if !defined(SHADER_TARGET_GLSL)
+#define fixed half
+#define fixed2 half2
+#define fixed3 half3
+#define fixed4 half4
+#define fixed4x4 half4x4
+#define fixed3x3 half3x3
+#define fixed2x2 half2x2
+#endif
+
+
 #define samplerRECT sampler2D
 #define texRECT tex2D
 #define texRECTlod tex2Dlod
@@ -12,7 +23,7 @@
 #define VPOS WPOS
 #endif
 
-#if !defined(SHADER_API_XBOX360) && !defined(SHADER_API_PS3) && !defined(SHADER_API_GLES) && !defined(SHADER_TARGET_GLSL)
+#if !defined(SHADER_API_XBOX360) && !defined(SHADER_API_PS3) && !defined(SHADER_API_GLES) && !defined(SHADER_TARGET_GLSL) && !defined(SHADER_API_D3D11)
 #define UNITY_HAS_LIGHT_PARAMETERS 1
 #endif
 
@@ -88,7 +99,7 @@ float4	 glstate_lightmodel_ambient;
 #endif
 
 
-#if defined(SHADER_API_D3D9) || defined(SHADER_API_XBOX360)
+#if defined(SHADER_API_D3D9) || defined(SHADER_API_XBOX360) || defined(SHADER_API_PS3)
 #define UNITY_ATTEN_CHANNEL r
 #else
 #define UNITY_ATTEN_CHANNEL a
@@ -98,7 +109,7 @@ float4	 glstate_lightmodel_ambient;
 #define UNITY_HALF_TEXEL_OFFSET
 #endif
 
-#if defined(SHADER_API_D3D9) || defined(SHADER_API_XBOX360)
+#if defined(SHADER_API_D3D9) || defined(SHADER_API_XBOX360) || defined(SHADER_API_PS3)
 #define UNITY_UV_STARTS_AT_TOP 1
 #else
 #define UNITY_UV_STARTS_AT_TOP 0

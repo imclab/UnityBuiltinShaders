@@ -1,6 +1,11 @@
 #ifndef UNITY_CG_INCLUDED
 #define UNITY_CG_INCLUDED
 
+#if defined (DIRECTIONAL_COOKIE) || defined (DIRECTIONAL)
+#define USING_DIRECTIONAL_LIGHT
+#endif
+
+
 // -------------------------------------------------------------------
 //  builtin values exposed from Unity
 
@@ -25,19 +30,28 @@ uniform float4 _ScreenParams;
 uniform float4 unity_Scale;
 
 uniform float3 _WorldSpaceCameraPos;
+#ifdef USING_DIRECTIONAL_LIGHT
+uniform fixed4 _WorldSpaceLightPos0;
+#else
 uniform float4 _WorldSpaceLightPos0;
+#endif
 
 uniform float4x4 _Object2World, _World2Object;
 
 uniform float4 _LightPositionRange; // xyz = pos, w = 1/range
 
 
+#if defined(SHADER_API_PS3)
+#	define UNITY_SAMPLE_DEPTH(value) (dot((value).wxy, float3(0.996093809371817670572857294849, 0.0038909914428586627756752238080039, 1.5199185323666651467481343000015e-5)))
+#else
+#	define UNITY_SAMPLE_DEPTH(value) (value).r
+#endif
+
+
+
 // -------------------------------------------------------------------
 //  helper functions and macros used in many standard shaders
 
-#if defined (DIRECTIONAL_COOKIE) || defined (DIRECTIONAL)
-#define USING_DIRECTIONAL_LIGHT
-#endif
 
 #if defined (DIRECTIONAL) || defined (DIRECTIONAL_COOKIE) || defined (POINT) || defined (SPOT) || defined (POINT_NOATT) || defined (POINT_COOKIE)
 #define USING_LIGHT_MULTI_COMPILE
@@ -64,7 +78,7 @@ struct appdata_full {
     float3 normal : NORMAL;
     float4 texcoord : TEXCOORD0;
     float4 texcoord1 : TEXCOORD1;
-    float4 color : COLOR;
+    fixed4 color : COLOR;
 };
 
 // Computes world space light direction
@@ -111,18 +125,9 @@ inline float3 ObjSpaceViewDir( in float4 v )
 }
 
 // Declares 3x3 matrix 'rotation', filled with tangent space basis
-#if defined(SHADER_TARGET_GLSL)
-#define TANGENT_SPACE_ROTATION \
-	float3 binormal = cross( v.normal, v.tangent.xyz ) * v.tangent.w; \
-	float3x3 rotation = float3x3( \
-		v.tangent.x, binormal.x, v.normal.x, \
-		v.tangent.y, binormal.y, v.normal.y, \
-		v.tangent.z, binormal.z, v.normal.z )
-#else
 #define TANGENT_SPACE_ROTATION \
 	float3 binormal = cross( v.normal, v.tangent.xyz ) * v.tangent.w; \
 	float3x3 rotation = float3x3( v.tangent.xyz, binormal, v.normal )
-#endif
 
 
 float4 unity_4LightPosX0;
@@ -223,23 +228,23 @@ half3 ShadeSH9 (half4 normal)
 } 
 
 
-// Transforms float2 UV by scale/bias property
+// Transforms 2D UV by scale/bias property
 #define TRANSFORM_TEX(tex,name) (tex.xy * name##_ST.xy + name##_ST.zw)
-// Transforms float4 UV by a texture matrix (use only if you know exactly which matrix you need)
+// Transforms 4D UV by a texture matrix (use only if you know exactly which matrix you need)
 #define TRANSFORM_UV(idx) mul (UNITY_MATRIX_TEXTURE##idx, v.texcoord).xy
 
 
 
 struct v2f_vertex_lit {
 	float2 uv	: TEXCOORD0;
-	float4 diff	: COLOR0;
-	float4 spec	: COLOR1;
+	fixed4 diff	: COLOR0;
+	fixed4 spec	: COLOR1;
 };  
 
-inline half4 VertexLight( v2f_vertex_lit i, sampler2D mainTex )
+inline fixed4 VertexLight( v2f_vertex_lit i, sampler2D mainTex )
 {
-	half4 texcol = tex2D( mainTex, i.uv );
-	half4 c;
+	fixed4 texcol = tex2D( mainTex, i.uv );
+	fixed4 c;
 	c.xyz = ( texcol.xyz * i.diff.xyz + i.spec.xyz * texcol.a ) * 2;
 	c.w = texcol.w * i.diff.w;
 	return c;
@@ -257,15 +262,15 @@ inline float2 ParallaxOffset( half h, half height, half3 viewDir )
 
 
 // Converts color to luminance (grayscale)
-inline half Luminance( half3 c )
+inline fixed Luminance( fixed3 c )
 {
-	return dot( c, half3(0.22, 0.707, 0.071) );
+	return dot( c, fixed3(0.22, 0.707, 0.071) );
 }
 
 // Decodes lightmaps:
 // - doubleLDR encoded on GLES
 // - RGBM encoded with range [0;8] on other platforms using surface shaders
-inline half3 DecodeLightmap( half4 color )
+inline fixed3 DecodeLightmap( fixed4 color )
 {
 #ifdef SHADER_API_GLES
 	return 2.0 * color.rgb;
@@ -282,11 +287,11 @@ inline half3 DecodeLightmap( half4 color )
 
 struct appdata_img {
     float4 vertex : POSITION;
-    float2 texcoord : TEXCOORD0;
+    half2 texcoord : TEXCOORD0;
 };
 struct v2f_img {
 	float4 pos : SV_POSITION;
-	float2 uv : TEXCOORD0;
+	half2 uv : TEXCOORD0;
 };
 
 float2 MultiplyUV (float4x4 mat, float2 inUV) {
@@ -372,12 +377,24 @@ inline void DecodeDepthNormal( float4 enc, out float depth, out float3 normal )
 	normal = DecodeViewNormalStereo (enc);
 }
 
-inline half4 UnpackNormal(half4 packednormal)
+inline fixed3 UnpackNormalDXT5nm (fixed4 packednormal)
 {
-	half4 normal;
+	fixed3 normal;
 	normal.xy = packednormal.wy * 2 - 1;
 	normal.z = sqrt(1 - normal.x*normal.x - normal.y * normal.y);
 	return normal;
+}
+
+inline fixed3 UnpackNormal(fixed4 packednormal)
+{
+#ifdef SHADER_API_GLES
+	return packednormal.xyz * 2 - 1;
+#else
+	fixed3 normal;
+	normal.xy = packednormal.wy * 2 - 1;
+	normal.z = sqrt(1 - normal.x*normal.x - normal.y * normal.y);
+	return normal;
+#endif
 }
 
 uniform float4 _ZBufferParams;
@@ -419,7 +436,36 @@ inline float4 ComputeScreenPos (float4 pos) {
 	#endif
 	o.zw = pos.zw;
 	return o;
-}	
+}
+
+// on GLES platforms (mobiles) we account for orientation by rotating projection matrix
+// so usual trick won't work
+
+inline float2 TransformViewToProjection (float2 v) {
+	float2 o;
+#ifdef SHADER_API_GLES
+	o.x = dot( v, float2(UNITY_MATRIX_P[0][0],UNITY_MATRIX_P[0][1]) );
+	o.y = dot( v, float2(UNITY_MATRIX_P[1][0],UNITY_MATRIX_P[1][1]) );
+#else
+	o.x = v.x*UNITY_MATRIX_P[0][0];
+	o.y = v.y*UNITY_MATRIX_P[1][1];
+#endif
+	return o;
+}
+
+inline float3 TransformViewToProjection (float3 v) {
+	float3 o;
+#ifdef SHADER_API_GLES
+	o.x = dot( v.xy, float2(UNITY_MATRIX_P[0][0],UNITY_MATRIX_P[0][1]) );
+	o.y = dot( v.xy, float2(UNITY_MATRIX_P[1][0],UNITY_MATRIX_P[1][1]) );
+#else
+	o.x = v.x*UNITY_MATRIX_P[0][0];
+	o.y = v.y*UNITY_MATRIX_P[1][1];
+#endif
+	o.z = v.z * UNITY_MATRIX_P[2][2];
+	return o;
+}
+
 
 
 // Shadow caster pass helpers

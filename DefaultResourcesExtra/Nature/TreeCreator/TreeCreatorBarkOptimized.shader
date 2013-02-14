@@ -17,6 +17,7 @@ SubShader {
 	
 CGPROGRAM
 #pragma surface surf BlinnPhong vertex:TreeVertBark addshadow nolightmap
+#pragma glsl_no_auto_normalization
 #include "Tree.cginc"
 
 sampler2D _MainTex;
@@ -25,20 +26,20 @@ sampler2D _TranslucencyMap;
 
 struct Input {
 	float2 uv_MainTex;
-	float4 color : COLOR;
+	fixed4 color : COLOR;
 };
 
 void surf (Input IN, inout SurfaceOutput o) {
-	half4 c = tex2D(_MainTex, IN.uv_MainTex);
+	fixed4 c = tex2D(_MainTex, IN.uv_MainTex);
 	o.Albedo = c.rgb * _Color.rgb * IN.color.a;
 	
-	half4 trngls = tex2D (_TranslucencyMap, IN.uv_MainTex);
+	fixed4 trngls = tex2D (_TranslucencyMap, IN.uv_MainTex);
 	o.Gloss = trngls.a * _Color.r;
 	o.Alpha = c.a;
 	
 	half4 norspc = tex2D (_BumpSpecMap, IN.uv_MainTex);
 	o.Specular = norspc.r;
-	o.Normal = UnpackNormal(norspc);
+	o.Normal = UnpackNormalDXT5nm(norspc);
 }
 ENDCG
 }

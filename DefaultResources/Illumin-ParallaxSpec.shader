@@ -21,9 +21,9 @@ sampler2D _MainTex;
 sampler2D _BumpMap;
 sampler2D _ParallaxMap;
 sampler2D _Illum;
-float4 _Color;
+fixed4 _Color;
 float _Parallax;
-float _Shininess;
+half _Shininess;
 
 struct Input {
 	float2 uv_MainTex;
@@ -39,8 +39,8 @@ void surf (Input IN, inout SurfaceOutput o) {
 	IN.uv_BumpMap += offset;
 	IN.uv_Illum += offset;
 
-	half4 tex = tex2D(_MainTex, IN.uv_MainTex);
-	half4 c = tex * _Color;
+	fixed4 tex = tex2D(_MainTex, IN.uv_MainTex);
+	fixed4 c = tex * _Color;
 	o.Albedo = c.rgb;
 	o.Gloss = tex.a;
 	o.Emission = c.rgb * tex2D(_Illum, IN.uv_Illum).a;

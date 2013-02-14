@@ -9,9 +9,11 @@ Shader "Hidden/TerrainEngine/Details/BillboardWavingDoublePass" {
 CGINCLUDE
 #include "UnityCG.cginc"
 #include "TerrainEngine.cginc"
+#pragma glsl_no_auto_normalization
+
 struct v2f {
 	float4 pos : POSITION;
-	float4 color : COLOR;
+	fixed4 color : COLOR;
 	float4 uv : TEXCOORD0;
 };
 v2f BillboardVert (appdata_full v) {
@@ -41,15 +43,15 @@ CGPROGRAM
 #pragma surface surf Lambert vertex:WavingGrassBillboardVert addshadow
 			
 sampler2D _MainTex;
-float _Cutoff;
+fixed _Cutoff;
 
 struct Input {
 	float2 uv_MainTex;
-	float4 color : COLOR;
+	fixed4 color : COLOR;
 };
 
 void surf (Input IN, inout SurfaceOutput o) {
-	half4 c = tex2D(_MainTex, IN.uv_MainTex) * IN.color;
+	fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * IN.color;
 	o.Albedo = c.rgb;
 	o.Alpha = c.a;
 	clip (o.Alpha - _Cutoff);

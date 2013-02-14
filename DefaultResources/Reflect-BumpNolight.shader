@@ -58,28 +58,28 @@ v2f vert(appdata_tan v)
 uniform sampler2D _BumpMap;
 uniform sampler2D _MainTex;
 uniform samplerCUBE _Cube;
-uniform float4 _ReflectColor;
-uniform float4 _Color;
+uniform fixed4 _ReflectColor;
+uniform fixed4 _Color;
 
-float4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
 	// Sample and expand the normal map texture	
-	half4 normal = UnpackNormal(tex2D(_BumpMap, i.uv2));
+	fixed3 normal = UnpackNormal(tex2D(_BumpMap, i.uv2));
 	
-	half4 texcol = tex2D(_MainTex,i.uv);
+	fixed4 texcol = tex2D(_MainTex,i.uv);
 	
 	// transform normal to world space
 	half3 wn;
-	wn.x = dot(i.TtoW0, normal.xyz);
-	wn.y = dot(i.TtoW1, normal.xyz);
-	wn.z = dot(i.TtoW2, normal.xyz);
+	wn.x = dot(i.TtoW0, normal);
+	wn.y = dot(i.TtoW1, normal);
+	wn.z = dot(i.TtoW2, normal);
 	
 	// calculate reflection vector in world space
 	half3 r = reflect(i.I, wn);
 	
-	half4 c = UNITY_LIGHTMODEL_AMBIENT * texcol;
+	fixed4 c = UNITY_LIGHTMODEL_AMBIENT * texcol;
 	c.rgb *= 2;
-	half4 reflcolor = texCUBE(_Cube, r) * _ReflectColor * texcol.a;
+	fixed4 reflcolor = texCUBE(_Cube, r) * _ReflectColor * texcol.a;
 	return c + reflcolor;
 }
 ENDCG  

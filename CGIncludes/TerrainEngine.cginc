@@ -10,13 +10,13 @@ struct appdata_tree {
     float4 vertex : POSITION;		// position
     float4 tangent : TANGENT;		// directional AO
     float3 normal : NORMAL;			// normal
-    float4 color : COLOR;			// .w = bend factor
+    fixed4 color : COLOR;			// .w = bend factor
     float4 texcoord : TEXCOORD0;	// UV
 };
 
 struct appdata_tree_billboard {
 	float4 vertex : POSITION;
-	float4 color : COLOR;			// Color
+	fixed4 color : COLOR;			// Color
 	float4 texcoord : TEXCOORD0;	// UV Coordinates 
 	float2 texcoord1 : TEXCOORD1;	// Billboard extrusion
 };
@@ -52,12 +52,12 @@ void FastSinCos (float4 val, out float4 s, out float4 c) {
 }
 
 
-uniform float4 _WavingTint;
+uniform fixed4 _WavingTint;
 uniform float4 _WaveAndDistance;	// wind speed, wave size, wind amount, max sqr distance
 uniform float4 _CameraPosition;		// .xyz = camera position, .w = 1 / (max sqr distance)
 uniform float3 _CameraRight, _CameraUp;
 
-float4 TerrainWaveGrass (inout float4 vertex, float waveAmount, float4 color)
+fixed4 TerrainWaveGrass (inout float4 vertex, float waveAmount, fixed4 color)
 {
 	float4 _waveXSize = float4(0.012, 0.02, 0.06, 0.024) * _WaveAndDistance.y;
 	float4 _waveZSize = float4 (0.006, .02, 0.02, 0.05) * _WaveAndDistance.y;
@@ -92,14 +92,14 @@ float4 TerrainWaveGrass (inout float4 vertex, float waveAmount, float4 color)
 	vertex.xz -= waveMove.xz * _WaveAndDistance.z;
 	
 	// apply color animation
-	float3 waveColor = lerp (float3(0.5,0.5,0.5), _WavingTint.rgb, lighting);
+	fixed3 waveColor = lerp (fixed3(0.5,0.5,0.5), _WavingTint.rgb, lighting);
 	
 	// Fade the grass out before detail distance.
 	// Saturate because Radeon HD drivers on OS X 10.4.10 don't saturate vertex colors properly.
 	float3 offset = vertex.xyz - _CameraPosition.xyz;
 	color.a = saturate (2 * (_WaveAndDistance.w - dot (offset, offset)) * _CameraPosition.w);
 	
-	return half4(2 * waveColor * color.rgb, color.a);
+	return fixed4(2 * waveColor * color.rgb, color.a);
 }
 
 void TerrainBillboardGrass( inout float4 pos, float2 offset )
@@ -151,11 +151,18 @@ inline float4 Squash(in float4 pos)
 	// plane point - point lying on the plane, defined in model space
 	// plane normal - _SquashPlaneNormal.xyz
 	
-	float3 projectedVertex = pos.xyz;
-	float3 planePoint = float3(0, _SquashPlaneNormal.w, 0);
+	// we're pushing squashed tree plane in direction of planeNormal by amount of _SquashPlaneNormal.w
+	// this squashing has to match logic of tree billboards
+	
 	float3 planeNormal = _SquashPlaneNormal.xyz;
 	
-	projectedVertex += dot(planeNormal, (planePoint - pos)) * planeNormal;
+	// unoptimized version:
+	//float3 planePoint = -planeNormal * _SquashPlaneNormal.w;
+	//float3 projectedVertex = pos.xyz + dot(planeNormal, (planePoint - pos)) * planeNormal;
+		
+	// optimized version:	
+	float3 projectedVertex = pos.xyz - (dot(planeNormal, pos) + _SquashPlaneNormal.w) * planeNormal;
+	
 	pos = float4(lerp(projectedVertex, pos.xyz, _SquashAmount), 1);
 	
 	return pos;
@@ -185,7 +192,9 @@ void TerrainBillboardTree( inout float4 pos, float2 offset, float offsetz )
 	float3 treePos = pos.xyz - _TreeBillboardCameraPos.xyz;
 	float treeDistanceSqr = dot(treePos, treePos);
 	if( treeDistanceSqr > _TreeBillboardDistances.x )
-		offset.xy = 0.0;
+		offset.xy = offsetz = 0.0;
+		
+	// positioning of billboard vertices horizontally
 	pos.xyz += _TreeBillboardCameraRight.xyz * offset.x;
 	
 	// tree billboards can have non-uniform scale,
@@ -195,12 +204,16 @@ void TerrainBillboardTree( inout float4 pos, float2 offset, float offsetz )
 	// 1) non-compensating
 	//pos.xyz += _TreeBillboardCameraUp.xyz * offset.y;
 	
-	// 2) correct compensating (using elipse-radius formula)
+	// 2) correct compensating (?) 
 	//float alpha = _TreeBillboardCameraPos.w;
 	//float a = offset.y;
-	//float b = offset.x;
-	//float r = abs(a * b) / sqrt(sqr(a * sin(alpha)) + sqr(b * cos(alpha)));	
-	//pos.xyz += _TreeBillboardCameraUp.xyz * sign(a) * r;
+	//float b = offsetz;
+		// 2a) using elipse-radius formula
+		////float r = abs(a * b) / sqrt(sqr(a * sin(alpha)) + sqr(b * cos(alpha))) * sign(b);
+		//float r = abs(a) * b / sqrt(sqr(a * sin(alpha)) + sqr(b * cos(alpha)));
+		// 2b) sin-cos lerp
+		//float r = b * sin(alpha) + a * cos(alpha);	
+	//pos.xyz += _TreeBillboardCameraUp.xyz * r;
 	
 	// 3) incorrect compensating (using lerp)
 	// _TreeBillboardCameraPos.w contains ImposterRenderTexture::GetBillboardAngleFactor()
@@ -211,41 +224,36 @@ void TerrainBillboardTree( inout float4 pos, float2 offset, float offsetz )
 	// so now we take solution #3 and complicate it even further...
 	// 
 	// case 49851: Flying trees
-	// The problem is that tree billboard is fixed on it's center, which means
+	// The problem was that tree billboard was fixed on it's center, which means
 	// the root of the tree is not fixed and can float around. This can be quite visible
 	// on slopes (checkout the case on fogbugz for screenshots).
-	// This can be fixed by introducing another billboard fixation mode - billboard is 
-	// fixed to the bottom center point, i.e. approximatelly where root of the tree 
-	// should be. Problem is that we can't just use that fixation point all the time,
-	// because it doesn't work when looking from above, so we have to interpolate between
-	// these two modes:
-	// 1) Use bottom-center when looking from front
-	// 2) User center-center when looking from above/bellow
-	// The blend between the modes is controlled by billboardModeFactor
-	// 
-	// billboardRootOffsetFactor is used for offsetting billboard, so root of the tree
-	// in the billboard texture matches root of the tree in physical space. This mismatch
-	// is caused by the fact that tree is always renderer into center of tree billboard.
-		
+	//
+	// We're fixing this by fixing billboards to the root of the tree. 
+	// Note that root of the tree is not necessary the bottom of the tree - 
+	// there might be significant part of the tree bellow terrain.
+	// This fixation mode doesn't work when looking from above/below, because
+	// billboard is so close to the ground, so we offset it by certain distance
+	// when viewing angle is bigger than certain treshold (40 deg at the moment)
 	
-	// _TreeBillboardCameraPos.w contains ImposterRenderTexture::GetBillboardAngleFactor()
+	// _TreeBillboardCameraPos.w contains ImposterRenderTexture::billboardAngleFactor
 	float billboardAngleFactor = _TreeBillboardCameraPos.w;
-	// non-uniform scale, see "3) incorrect compensating (using lerp)" above
+	// The following line performs two things:
+	// 1) peform non-uniform scale, see "3) incorrect compensating (using lerp)" above
+	// 2) blend between vertical and horizontal billboard mode
 	float radius = lerp(offset.y, offsetz, billboardAngleFactor);
-		
-	// _TreeBillboardCameraUp.w contains ImposterRenderTexture::GetBillboardModeFactor()
-	float billboardModeFactor = _TreeBillboardCameraUp.w;
-	
-	// _TreeBillboardCameraFront.w contains ImposterRenderTexture::GetBillboardRootOffsetFactor()
-	float billboardRootOffsetFactor = _TreeBillboardCameraFront.w;
-	
-	pos.xyz += lerp(
-		// bottom-center billboard mode
-		_TreeBillboardCameraUp.xyz * max(0, radius) * 2 - float3(0, 1, 0) * abs(offset.y) - _TreeBillboardCameraUp.xyz * abs(radius) * billboardRootOffsetFactor,
-		// center-center billboard mode
-		_TreeBillboardCameraUp.xyz * radius,
-		billboardModeFactor
-	);
+			
+	// positioning of billboard vertices veritally
+	pos.xyz += _TreeBillboardCameraUp.xyz * radius;
+			
+	// _TreeBillboardCameraUp.w contains ImposterRenderTexture::billboardOffsetFactor
+	float billboardOffsetFactor = _TreeBillboardCameraUp.w;
+	// Offsetting billboad from the ground, so it doesn't get clipped by ztest.
+	// In theory we should use billboardCenterOffsetY instead of offset.x,
+	// but we can't because offset.y is not the same for all 4 vertices, so 
+	// we use offset.x which is the same for all 4 vertices (except sign). 
+	// And it doesn't matter a lot how much we offset, we just need to offset 
+	// it by some distance
+	pos.xyz += _TreeBillboardCameraFront.xyz * abs(offset.x) * billboardOffsetFactor;
 }
 
 
@@ -352,7 +360,7 @@ struct appdata_grass {
 	float4 vertex : POSITION;
 	float4 tangent : TANGENT;
 	float3 normal : NORMAL;			// normal
-	float4 color : COLOR;			// XSize, ySize, wavyness, unused
+	fixed4 color : COLOR;			// XSize, ySize, wavyness, unused
 	float4 texcoord : TEXCOORD0;	// UV Coordinates 
 	float4 texcoord1 : TEXCOORD1;	// Billboard extrusion
 };

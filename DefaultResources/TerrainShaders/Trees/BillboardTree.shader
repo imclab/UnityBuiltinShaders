@@ -20,7 +20,7 @@ Shader "Hidden/TerrainEngine/BillboardTree" {
 			struct v2f {
 				float4 pos : POSITION;
 				float fog : FOGC;
-				float4 color : COLOR0;
+				fixed4 color : COLOR0;
 				float2 uv : TEXCOORD0;
 			};
 
@@ -36,9 +36,9 @@ Shader "Hidden/TerrainEngine/BillboardTree" {
 			}
 
 			sampler2D _MainTex;
-			half4 frag(v2f input) : COLOR
+			fixed4 frag(v2f input) : COLOR
 			{
-				half4 col = tex2D( _MainTex, input.uv);
+				fixed4 col = tex2D( _MainTex, input.uv);
 				col.rgb *= input.color.rgb;
 				clip(col.a);
 				return col;
@@ -61,7 +61,7 @@ Shader "Hidden/TerrainEngine/BillboardTree" {
 			struct v2f {
 				float4 pos : POSITION;
 				float fog : FOGC;
-				float4 color : COLOR0;
+				fixed4 color : COLOR0;
 				float2 uv : TEXCOORD0;
 			};
 

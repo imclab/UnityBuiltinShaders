@@ -18,8 +18,8 @@ CGPROGRAM
 sampler2D _MainTex;
 sampler2D _BumpMap;
 sampler2D _ParallaxMap;
-float4 _Color;
-float _Shininess;
+fixed4 _Color;
+half _Shininess;
 float _Parallax;
 
 struct Input {
@@ -34,7 +34,7 @@ void surf (Input IN, inout SurfaceOutput o) {
 	IN.uv_MainTex += offset;
 	IN.uv_BumpMap += offset;
 	
-	half4 tex = tex2D(_MainTex, IN.uv_MainTex);
+	fixed4 tex = tex2D(_MainTex, IN.uv_MainTex);
 	o.Albedo = tex.rgb * _Color.rgb;
 	o.Gloss = tex.a;
 	o.Alpha = tex.a * _Color.a;

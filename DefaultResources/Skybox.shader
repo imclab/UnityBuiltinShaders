@@ -16,7 +16,7 @@ SubShader {
 	CGINCLUDE
 	#include "UnityCG.cginc"
 
-	float4 _Tint;
+	fixed4 _Tint;
 	
 	struct appdata_t {
 		float4 vertex : POSITION;
@@ -33,10 +33,10 @@ SubShader {
 		o.texcoord = v.texcoord;
 		return o;
 	}
-	half4 skybox_frag (v2f i, sampler2D smp)
+	fixed4 skybox_frag (v2f i, sampler2D smp)
 	{
-		half4 tex = tex2D (smp, i.texcoord);
-		half4 col;
+		fixed4 tex = tex2D (smp, i.texcoord);
+		fixed4 col;
 		col.rgb = tex.rgb + _Tint.rgb - 0.5;
 		col.a = tex.a * _Tint.a;
 		return col;
@@ -49,7 +49,7 @@ SubShader {
 		#pragma fragment frag
 		#pragma fragmentoption ARB_precision_hint_fastest
 		sampler2D _FrontTex;
-		half4 frag (v2f i) : COLOR { return skybox_frag(i,_FrontTex); }
+		fixed4 frag (v2f i) : COLOR { return skybox_frag(i,_FrontTex); }
 		ENDCG 
 	}
 	Pass{
@@ -58,7 +58,7 @@ SubShader {
 		#pragma fragment frag
 		#pragma fragmentoption ARB_precision_hint_fastest
 		sampler2D _BackTex;
-		half4 frag (v2f i) : COLOR { return skybox_frag(i,_BackTex); }
+		fixed4 frag (v2f i) : COLOR { return skybox_frag(i,_BackTex); }
 		ENDCG 
 	}
 	Pass{
@@ -67,7 +67,7 @@ SubShader {
 		#pragma fragment frag
 		#pragma fragmentoption ARB_precision_hint_fastest
 		sampler2D _LeftTex;
-		half4 frag (v2f i) : COLOR { return skybox_frag(i,_LeftTex); }
+		fixed4 frag (v2f i) : COLOR { return skybox_frag(i,_LeftTex); }
 		ENDCG
 	}
 	Pass{
@@ -76,7 +76,7 @@ SubShader {
 		#pragma fragment frag
 		#pragma fragmentoption ARB_precision_hint_fastest
 		sampler2D _RightTex;
-		half4 frag (v2f i) : COLOR { return skybox_frag(i,_RightTex); }
+		fixed4 frag (v2f i) : COLOR { return skybox_frag(i,_RightTex); }
 		ENDCG
 	}	
 	Pass{
@@ -85,7 +85,7 @@ SubShader {
 		#pragma fragment frag
 		#pragma fragmentoption ARB_precision_hint_fastest
 		sampler2D _UpTex;
-		half4 frag (v2f i) : COLOR { return skybox_frag(i,_UpTex); }
+		fixed4 frag (v2f i) : COLOR { return skybox_frag(i,_UpTex); }
 		ENDCG
 	}	
 	Pass{
@@ -94,7 +94,7 @@ SubShader {
 		#pragma fragment frag
 		#pragma fragmentoption ARB_precision_hint_fastest
 		sampler2D _DownTex;
-		half4 frag (v2f i) : COLOR { return skybox_frag(i,_DownTex); }
+		fixed4 frag (v2f i) : COLOR { return skybox_frag(i,_DownTex); }
 		ENDCG
 	}
 }	

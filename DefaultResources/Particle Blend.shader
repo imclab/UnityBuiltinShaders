@@ -27,17 +27,17 @@ Category {
 			#include "UnityCG.cginc"
 
 			sampler2D _MainTex;
-			float4 _TintColor;
+			fixed4 _TintColor;
 			
 			struct appdata_t {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 			};
 
 			struct v2f {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 				#ifdef SOFTPARTICLES_ON
 				float4 projPos : TEXCOORD1;
@@ -62,10 +62,10 @@ Category {
 			sampler2D _CameraDepthTexture;
 			float _InvFade;
 			
-			half4 frag (v2f i) : COLOR
+			fixed4 frag (v2f i) : COLOR
 			{
 				#ifdef SOFTPARTICLES_ON
-				float sceneZ = LinearEyeDepth (tex2Dproj(_CameraDepthTexture, UNITY_PROJ_COORD(i.projPos)).r);
+				float sceneZ = LinearEyeDepth (UNITY_SAMPLE_DEPTH(tex2Dproj(_CameraDepthTexture, UNITY_PROJ_COORD(i.projPos))));
 				float partZ = i.projPos.z;
 				float fade = saturate (_InvFade * (sceneZ-partZ));
 				i.color *= fade;

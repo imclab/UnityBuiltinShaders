@@ -21,15 +21,15 @@ CGPROGRAM
 #include "TerrainEngine.cginc"
 
 sampler2D _MainTex;
-float _Cutoff;
+fixed _Cutoff;
 
 struct Input {
 	float2 uv_MainTex;
-	float4 color : COLOR;
+	fixed4 color : COLOR;
 };
 
 void surf (Input IN, inout SurfaceOutput o) {
-	half4 c = tex2D(_MainTex, IN.uv_MainTex) * IN.color;
+	fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * IN.color;
 	o.Albedo = c.rgb;
 	o.Alpha = c.a;
 	clip (o.Alpha - _Cutoff);

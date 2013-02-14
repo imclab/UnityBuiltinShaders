@@ -3,7 +3,7 @@
 #include "TerrainEngine.cginc"
 
 float _Occlusion, _AO, _BaseLight;
-float4 _Color;
+fixed4 _Color;
 float3 _TerrainTreeLightDirections[4];
 float4 _TerrainTreeLightColors[4];
 
@@ -11,7 +11,7 @@ struct v2f {
 	float4 pos : POSITION;
 	float fog : FOGC;
 	float4 uv : TEXCOORD0;
-	float4 color : COLOR0;
+	fixed4 color : COLOR0;
 };
 
 float4x4 _CameraToWorld;

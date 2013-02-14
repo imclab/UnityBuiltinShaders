@@ -52,12 +52,12 @@ v2f vert(appdata_tan v)
 
 uniform sampler2D _MainTex;
 uniform samplerCUBE _Cube;
-uniform float4 _ReflectColor;
+uniform fixed4 _ReflectColor;
 
-half4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
-	half4 texcol = tex2D (_MainTex, i.uv);
-	half4 reflcol = texCUBE( _Cube, i.I );
+	fixed4 texcol = tex2D (_MainTex, i.uv);
+	fixed4 reflcol = texCUBE( _Cube, i.I );
 	reflcol *= texcol.a;
 	return reflcol * _ReflectColor;
 } 
@@ -85,18 +85,18 @@ CGPROGRAM
 
 struct v2f {
 	float2 uv : TEXCOORD0;
-	float4 diff : COLOR0;
-	float4 spec : COLOR1;
+	fixed4 diff : COLOR0;
+	fixed4 spec : COLOR1;
 };
 
 uniform sampler2D _MainTex : register(s0);
-uniform float4 _ReflectColor;
-uniform float4 _SpecColor;
+uniform fixed4 _ReflectColor;
+uniform fixed4 _SpecColor;
 
-half4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
-	half4 temp = tex2D (_MainTex, i.uv);	
-	half4 c;
+	fixed4 temp = tex2D (_MainTex, i.uv);	
+	fixed4 c;
 	c.xyz = (temp.xyz * i.diff.xyz + temp.w * i.spec.xyz ) * 2;
 	c.w = temp.w * (i.diff.w + Luminance(i.spec.xyz) * _SpecColor.a);
 	return c;

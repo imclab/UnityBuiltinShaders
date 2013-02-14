@@ -31,7 +31,7 @@ Shader "Hidden/BlitCopy" {
 				return o;
 			}
 
-			half4 frag (v2f i) : COLOR
+			fixed4 frag (v2f i) : COLOR
 			{
 				return tex2D(_MainTex, i.texcoord);
 			}

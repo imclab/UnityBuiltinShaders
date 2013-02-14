@@ -10,13 +10,14 @@ Pass {
 CGPROGRAM
 #pragma vertex vert
 #pragma fragment frag
+#pragma glsl_no_auto_normalization
 #pragma multi_compile_shadowcollector
 
 #include "UnityCG.cginc"
 struct appdata {
 	float4 vertex : POSITION;
 	float2 texcoord : TEXCOORD0;
-	float3 texcoord1 : TEXCOORD1;
+	float3 normal : NORMAL;
 };
 
 struct v2f {
@@ -30,7 +31,7 @@ v2f vert (appdata v)
 	v2f o;
 	o.pos = mul(UNITY_MATRIX_MVP, v.vertex);
 	o.uv = v.texcoord;
-	o.ray = v.texcoord1;
+	o.ray = v.normal;
 	return o;
 }
 sampler2D _CameraDepthTexture;
@@ -66,9 +67,9 @@ inline half unitySampleShadow (float4 wpos, float z)
 	return shadow;
 }
 
-half4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
-	float depth = tex2D (_CameraDepthTexture, i.uv).r;
+	float depth = UNITY_SAMPLE_DEPTH(tex2D (_CameraDepthTexture, i.uv));
 	depth = Linear01Depth (depth);
 	float4 vpos = float4(i.ray * depth,1);
 	float4 wpos = mul (_CameraToWorld, vpos);	

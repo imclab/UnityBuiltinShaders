@@ -22,13 +22,13 @@ Shader "Hidden/Internal-Flare"
 			
 			struct appdata_t {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 			};
 
 			struct v2f {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 			};
 
@@ -43,7 +43,7 @@ Shader "Hidden/Internal-Flare"
 				return o;
 			}
 
-			half4 frag (v2f i) : COLOR
+			fixed4 frag (v2f i) : COLOR
 			{
 				return tex2D(_FlareTexture, i.texcoord) * i.color;
 			}

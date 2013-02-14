@@ -14,12 +14,12 @@ Shader "Hidden/Internal-Halo" {
 			sampler2D _HaloFalloff;
 			struct appdata_t {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 			};
 			struct v2f {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 			};
 			float4 _HaloFalloff_ST;
@@ -31,7 +31,7 @@ Shader "Hidden/Internal-Halo" {
 				o.texcoord = TRANSFORM_TEX(v.texcoord,_HaloFalloff);
 				return o;
 			}
-			half4 frag (v2f i) : COLOR
+			fixed4 frag (v2f i) : COLOR
 			{
 				half a = tex2D(_HaloFalloff, i.texcoord).a;
 				return half4 (i.color.rgb * a, a);

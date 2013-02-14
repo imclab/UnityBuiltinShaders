@@ -3,20 +3,19 @@
 
 #include "TerrainEngine.cginc"
 
-float4 _Color;
-half3 _TranslucencyColor;
-half _TranslucencyViewDependency;
+fixed4 _Color;
+fixed3 _TranslucencyColor;
+fixed _TranslucencyViewDependency;
 half _ShadowStrength;
 
 struct LeafSurfaceOutput {
-	half3 Albedo;
-	half3 Normal;
-	half3 Emission;
-	half Translucency;
-	half ShadowOffset;
+	fixed3 Albedo;
+	fixed3 Normal;
+	fixed3 Emission;
+	fixed Translucency;
 	half Specular;
-	half Gloss;
-	half Alpha;
+	fixed Gloss;
+	fixed Alpha;
 };
 
 inline half4 LightingTreeLeaf (LeafSurfaceOutput s, half3 lightDir, half3 viewDir, half atten)
@@ -29,21 +28,27 @@ inline half4 LightingTreeLeaf (LeafSurfaceOutput s, half3 lightDir, half3 viewDi
 	half spec = pow (nh, s.Specular * 128.0) * s.Gloss;
 	
 	// view dependent back contribution for translucency
-	half backContrib = saturate(dot(viewDir, -lightDir));
+	fixed backContrib = saturate(dot(viewDir, -lightDir));
 	
 	// normally translucency is more like -nl, but looks better when it's view dependent
 	backContrib = lerp(saturate(-nl), backContrib, _TranslucencyViewDependency);
 	
-	half3 translucencyColor = backContrib * s.Translucency * _TranslucencyColor;
+	fixed3 translucencyColor = backContrib * s.Translucency * _TranslucencyColor;
 	
 	// wrap-around diffuse
 	nl = max(0, nl * 0.6 + 0.4);
 	
-	half4 c;
+	fixed4 c;
 	c.rgb = s.Albedo * (translucencyColor * 2 + nl);
 	c.rgb = c.rgb * _LightColor0.rgb + spec;
 	
+	// For directional lights, apply less shadow attenuation
+	// based on shadow strength parameter.
+	#if defined(DIRECTIONAL) || defined(DIRECTIONAL_COOKIE)
 	c.rgb *= lerp(2, atten * 2, _ShadowStrength);
+	#else
+	c.rgb *= 2*atten;
+	#endif
 	
 	return c;
 }

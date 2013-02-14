@@ -53,11 +53,11 @@ v2f vert (appdata_full v) {
 sampler2D _MainTex;
 sampler2D _BumpSpecMap;
 sampler2D _TranslucencyMap;
-float4 _SpecColor;
+fixed4 _SpecColor;
 
-half4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
-	half3 albedo = tex2D (_MainTex, i.uv).rgb * i.color;
+	fixed3 albedo = tex2D (_MainTex, i.uv).rgb * i.color;
 	half gloss = tex2D (_TranslucencyMap, i.uv).a;
 	half specular = tex2D (_BumpSpecMap, i.uv).r * 128.0;
 	
@@ -75,7 +75,7 @@ half4 frag (v2f i) : COLOR
 		light += lightColor * _SpecColor.rgb * spec;
 	}
 	
-	half4 c;
+	fixed4 c;
 	c.rgb = light * 2.0;
 	c.a = 1.0;
 	return c;
@@ -95,7 +95,7 @@ SubShader {
 
 		struct v2f {
 			float4 pos : SV_POSITION;
-			float4 color : COLOR;
+			fixed4 color : COLOR;
 			float2 uv : TEXCOORD0;
 		};
 

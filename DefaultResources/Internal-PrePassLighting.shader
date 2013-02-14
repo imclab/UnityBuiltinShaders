@@ -13,12 +13,13 @@ CGPROGRAM
 #pragma target 3.0
 #pragma vertex vert
 #pragma fragment frag
+#pragma glsl_no_auto_normalization
 #pragma multi_compile_lightpass
 
 #include "UnityCG.cginc"
 struct appdata {
 	float4 vertex : POSITION;
-	float3 texcoord : TEXCOORD0;
+	float3 normal : NORMAL;
 };
 
 struct v2f {
@@ -37,7 +38,7 @@ v2f vert (appdata v)
 	// v.texcoord is equal to 0 when we are drawing 3D light shapes and
 	// contains a ray pointing from the camera to one of near plane's
 	// corners in camera space when we are drawing a full screen quad.
-	o.ray = lerp(o.ray, v.texcoord, v.texcoord.z != 0);
+	o.ray = lerp(o.ray, v.normal, v.normal.z != 0);
 	
 	return o;
 }
@@ -178,7 +179,7 @@ half ComputeShadow(float3 vec, float z, float2 uv)
 	return 1.0;
 }
 
-half4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
 	i.ray = i.ray * (_ProjectionParams.z / i.ray.z);
 	float2 uv = i.uv.xy / i.uv.w;
@@ -187,7 +188,7 @@ half4 frag (v2f i) : COLOR
 	half3 normal = nspec.rgb * 2 - 1;
 	normal = normalize(normal);
 	
-	float depth = tex2D (_CameraDepthTexture, uv).r;
+	float depth = UNITY_SAMPLE_DEPTH(tex2D (_CameraDepthTexture, uv));
 	depth = Linear01Depth (depth);
 	float4 vpos = float4(i.ray * depth,1);
 	float3 wpos = mul (_CameraToWorld, vpos).xyz;

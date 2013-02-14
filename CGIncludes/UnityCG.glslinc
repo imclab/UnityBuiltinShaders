@@ -111,7 +111,7 @@ vec3 ObjSpaceViewDir( vec4 v )
 // Transforms float4 UV by a texture matrix (old method)
 #define TRANSFORM_UV(idx) (gl_TextureMatrix[idx] * gl_TexCoord[0] ).xy
 
-#endif
+#endif // VERTEX
 
 
 
@@ -132,4 +132,4 @@ float Luminance( vec3 c )
 }
 
 
-#endif // VERTEX
+#endif

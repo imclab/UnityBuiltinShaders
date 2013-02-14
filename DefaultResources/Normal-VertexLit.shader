@@ -143,7 +143,7 @@ v2f vert (appdata v)
 	return o;
 }
 
-half4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
 	SHADOW_COLLECTOR_FRAGMENT(i)
 }
@@ -176,6 +176,7 @@ SubShader {
 	}	
 	// Lightmapped, encoded as dLDR
 	Pass {
+		// 1st pass - sample Lightmap
 		Tags { "LightMode" = "VertexLM" }
 
 		BindChannels {
@@ -189,8 +190,10 @@ SubShader {
 		}
 	}
 	Pass {
+		// 2nd pass - multiply with _MainTex
 		Tags { "LightMode" = "VertexLM" }
 		ZWrite Off
+		Fog {Mode Off}
 		Blend DstColor Zero
 		SetTexture [_MainTex] {
 			combine texture

@@ -18,7 +18,7 @@ SubShader {
 		#include "UnityCG.cginc"
 
 		samplerCUBE _Tex;
-		float4 _Tint;
+		fixed4 _Tint;
 		
 		struct appdata_t {
 			float4 vertex : POSITION;
@@ -38,10 +38,10 @@ SubShader {
 			return o;
 		}
 
-		half4 frag (v2f i) : COLOR
+		fixed4 frag (v2f i) : COLOR
 		{
-			half4 tex = texCUBE (_Tex, i.texcoord);
-			half4 col;
+			fixed4 tex = texCUBE (_Tex, i.texcoord);
+			fixed4 col;
 			col.rgb = tex.rgb + _Tint.rgb - 0.5;
 			col.a = tex.a * _Tint.a;
 			return col;

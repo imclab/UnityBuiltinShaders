@@ -30,7 +30,7 @@ Shader "GUI/Text Shader" {
 
 			sampler2D _MainTex;
 			uniform float4 _MainTex_ST;
-			uniform float4 _Color;
+			uniform fixed4 _Color;
 			
 			v2f vert (appdata_t v)
 			{
@@ -40,9 +40,9 @@ Shader "GUI/Text Shader" {
 				return o;
 			}
 
-			half4 frag (v2f i) : COLOR
+			fixed4 frag (v2f i) : COLOR
 			{
-				float4 col = _Color;
+				fixed4 col = _Color;
 				col.a *= tex2D(_MainTex, i.texcoord).a;
 				return col;
 			}

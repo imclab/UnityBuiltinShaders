@@ -20,21 +20,22 @@ SubShader {
 		
 CGPROGRAM
 #pragma surface surf TreeLeaf alphatest:_Cutoff vertex:TreeVertLeaf addshadow nolightmap
+#pragma glsl_no_auto_normalization
 #include "Tree.cginc"
 
 sampler2D _MainTex;
 sampler2D _BumpMap;
 sampler2D _GlossMap;
 sampler2D _TranslucencyMap;
-float _Shininess;
+half _Shininess;
 
 struct Input {
 	float2 uv_MainTex;
-	float4 color : COLOR; // color.a = AO
+	fixed4 color : COLOR; // color.a = AO
 };
 
 void surf (Input IN, inout LeafSurfaceOutput o) {
-	half4 c = tex2D(_MainTex, IN.uv_MainTex);
+	fixed4 c = tex2D(_MainTex, IN.uv_MainTex);
 	o.Albedo = c.rgb * _Color.rgb * IN.color.a;
 	o.Translucency = tex2D(_TranslucencyMap, IN.uv_MainTex).rgb;
 	o.Gloss = tex2D(_GlossMap, IN.uv_MainTex).a;

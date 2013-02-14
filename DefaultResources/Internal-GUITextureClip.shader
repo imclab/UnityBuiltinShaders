@@ -24,13 +24,13 @@ Shader "Hidden/Internal-GUITextureClip"
 
 			struct appdata_t {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 			};
 
 			struct v2f {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 				float2 texgencoord : TEXCOORD1;
 			};
@@ -39,7 +39,7 @@ Shader "Hidden/Internal-GUITextureClip"
 			sampler2D _GUIClipTexture;
 
 			uniform float4 _MainTex_ST;
-			uniform float4 _Color;
+			uniform fixed4 _Color;
 			uniform float4x4 _GUIClipTextureMatrix;
 			
 			v2f vert (appdata_t v)
@@ -53,9 +53,9 @@ Shader "Hidden/Internal-GUITextureClip"
 				return o;
 			}
 
-			half4 frag (v2f i) : COLOR
+			fixed4 frag (v2f i) : COLOR
 			{
-				float4 col = tex2D(_MainTex, i.texcoord) * i.color;
+				fixed4 col = tex2D(_MainTex, i.texcoord) * i.color;
 				col.a *= tex2D(_GUIClipTexture, i.texgencoord).a;
 				return col;
 			}

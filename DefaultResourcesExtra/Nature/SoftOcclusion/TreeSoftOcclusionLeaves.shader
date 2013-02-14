@@ -30,11 +30,11 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 			#include "SH_Vertex.cginc"
 			
 			sampler2D _MainTex;
-			float _Cutoff;
+			fixed _Cutoff;
 			
-			half4 frag(v2f input) : COLOR
+			fixed4 frag(v2f input) : COLOR
 			{
-				half4 c = tex2D( _MainTex, input.uv.xy);
+				fixed4 c = tex2D( _MainTex, input.uv.xy);
 				c.rgb *= 2.0f * input.color.rgb;
 				
 				clip (c.a - _Cutoff);
@@ -67,7 +67,7 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 			
 			struct appdata {
 			    float4 vertex : POSITION;
-			    float4 color : COLOR;
+			    fixed4 color : COLOR;
 			    float4 texcoord : TEXCOORD0;
 			};
 			v2f vert( appdata v )
@@ -80,11 +80,11 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 			}
 			
 			sampler2D _MainTex;
-			float _Cutoff;
+			fixed _Cutoff;
 					
 			float4 frag( v2f i ) : COLOR
 			{
-				half4 texcol = tex2D( _MainTex, i.uv );
+				fixed4 texcol = tex2D( _MainTex, i.uv );
 				clip( texcol.a - _Cutoff );
 				SHADOW_CASTER_FRAGMENT(i)
 			}

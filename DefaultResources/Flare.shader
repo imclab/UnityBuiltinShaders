@@ -16,17 +16,17 @@ SubShader {
 		#include "UnityCG.cginc"
 
 		sampler2D _MainTex;
-		float4 _TintColor;
+		fixed4 _TintColor;
 		
 		struct appdata_t {
 			float4 vertex : POSITION;
-			float4 color : COLOR;
+			fixed4 color : COLOR;
 			float2 texcoord : TEXCOORD0;
 		};
 
 		struct v2f {
 			float4 vertex : POSITION;
-			float4 color : COLOR;
+			fixed4 color : COLOR;
 			float2 texcoord : TEXCOORD0;
 		};
 
@@ -41,10 +41,10 @@ SubShader {
 			return o;
 		}
 
-		half4 frag (v2f i) : COLOR
+		fixed4 frag (v2f i) : COLOR
 		{
-			half4 col;
-			half4 tex = tex2D(_MainTex, i.texcoord);
+			fixed4 col;
+			fixed4 tex = tex2D(_MainTex, i.texcoord);
 			col.rgb = i.color.rgb * tex.rgb;
 			col.a = tex.a;
 			return col;

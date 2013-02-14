@@ -9,7 +9,7 @@ Properties {
 }
 
 SubShader {
-	Tags {"IgnoreProjector"="True" "RenderType"="TransparentCutout"}
+	Tags {"Queue"="AlphaTest" "IgnoreProjector"="True" "RenderType"="TransparentCutout"}
 	LOD 400
 	
 CGPROGRAM
@@ -17,8 +17,8 @@ CGPROGRAM
 
 sampler2D _MainTex;
 sampler2D _BumpMap;
-float4 _Color;
-float _Shininess;
+fixed4 _Color;
+half _Shininess;
 
 struct Input {
 	float2 uv_MainTex;
@@ -26,7 +26,7 @@ struct Input {
 };
 
 void surf (Input IN, inout SurfaceOutput o) {
-	half4 tex = tex2D(_MainTex, IN.uv_MainTex);
+	fixed4 tex = tex2D(_MainTex, IN.uv_MainTex);
 	o.Albedo = tex.rgb * _Color.rgb;
 	o.Gloss = tex.a;
 	o.Alpha = tex.a * _Color.a;

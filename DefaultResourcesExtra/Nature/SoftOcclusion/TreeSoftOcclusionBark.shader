@@ -26,9 +26,9 @@ Shader "Nature/Tree Soft Occlusion Bark" {
 			
 			sampler2D _MainTex;
 			
-			half4 frag(v2f input) : COLOR
+			fixed4 frag(v2f input) : COLOR
 			{
-				half4 col = input.color;
+				fixed4 col = input.color;
 				col.rgb *= 2.0f * tex2D( _MainTex, input.uv.xy).rgb;
 				return col;
 			}
@@ -57,7 +57,7 @@ Shader "Nature/Tree Soft Occlusion Bark" {
 			
 			struct appdata {
 			    float4 vertex : POSITION;
-			    float4 color : COLOR;
+			    fixed4 color : COLOR;
 			};
 			v2f vert( appdata v )
 			{

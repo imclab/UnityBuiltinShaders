@@ -24,13 +24,13 @@ Shader "Hidden/Internal-GUITexture"
 
 			struct appdata_t {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 			};
 
 			struct v2f {
 				float4 vertex : POSITION;
-				float4 color : COLOR;
+				fixed4 color : COLOR;
 				float2 texcoord : TEXCOORD0;
 			};
 
@@ -47,7 +47,7 @@ Shader "Hidden/Internal-GUITexture"
 				return o;
 			}
 
-			half4 frag (v2f i) : COLOR
+			fixed4 frag (v2f i) : COLOR
 			{
 				return 2.0f * tex2D(_MainTex, i.texcoord) * i.color;
 			}

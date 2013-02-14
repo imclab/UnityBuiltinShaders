@@ -8,22 +8,22 @@ Properties {
 }
 
 SubShader {
-	Tags {"IgnoreProjector"="True" "RenderType"="TransparentCutout"}
+	Tags {"Queue"="AlphaTest" "IgnoreProjector"="True" "RenderType"="TransparentCutout"}
 	LOD 300
 
 CGPROGRAM
 #pragma surface surf BlinnPhong alphatest:_Cutoff
 
 sampler2D _MainTex;
-float4 _Color;
-float _Shininess;
+fixed4 _Color;
+half _Shininess;
 
 struct Input {
 	float2 uv_MainTex;
 };
 
 void surf (Input IN, inout SurfaceOutput o) {
-	half4 tex = tex2D(_MainTex, IN.uv_MainTex);
+	fixed4 tex = tex2D(_MainTex, IN.uv_MainTex);
 	o.Albedo = tex.rgb * _Color.rgb;
 	o.Gloss = tex.a;
 	o.Alpha = tex.a * _Color.a;

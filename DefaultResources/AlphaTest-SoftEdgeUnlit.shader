@@ -17,7 +17,7 @@ Properties {
 }
 
 SubShader {
-	Tags { "IgnoreProjector"="True" "RenderType"="TransparentCutout" }
+	Tags { "Queue"="AlphaTest" "IgnoreProjector"="True" "RenderType"="TransparentCutout" }
 	Lighting off
 	
 	// Render both front and back facing polygons.

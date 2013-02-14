@@ -31,9 +31,9 @@ sampler2D _CameraNormalsTexture;
 
 float4x4 _WorldToCamera;
 
-float4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
-	float d = tex2D (_CameraDepthTexture, i.uv).r;
+	float d = UNITY_SAMPLE_DEPTH(tex2D (_CameraDepthTexture, i.uv));
 	float3 n = tex2D (_CameraNormalsTexture, i.uv) * 2.0 - 1.0;
 	d = Linear01Depth (d);
 	n = mul ((float3x3)_WorldToCamera, n);

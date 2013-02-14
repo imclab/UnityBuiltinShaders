@@ -10,7 +10,7 @@ Properties {
 
 // 2/3 texture stage GPUs
 SubShader {
-	Tags {"IgnoreProjector"="True" "RenderType"="TransparentCutout"}
+	Tags {"Queue"="AlphaTest" "IgnoreProjector"="True" "RenderType"="TransparentCutout"}
 	LOD 100
 	
 	// Non-lightmapped
@@ -116,12 +116,12 @@ v2f vert( appdata_base v )
 }
 
 uniform sampler2D _MainTex;
-uniform float _Cutoff;
-uniform float4 _Color;
+uniform fixed _Cutoff;
+uniform fixed4 _Color;
 
 float4 frag( v2f i ) : COLOR
 {
-	half4 texcol = tex2D( _MainTex, i.uv );
+	fixed4 texcol = tex2D( _MainTex, i.uv );
 	clip( texcol.a*_Color.a - _Cutoff );
 	
 	SHADOW_CASTER_FRAGMENT(i)
@@ -163,12 +163,12 @@ v2f vert (appdata_base v)
 }
 
 uniform sampler2D _MainTex;
-uniform float _Cutoff;
-uniform float4 _Color;
+uniform fixed _Cutoff;
+uniform fixed4 _Color;
 
-half4 frag (v2f i) : COLOR
+fixed4 frag (v2f i) : COLOR
 {
-	half4 texcol = tex2D( _MainTex, i.uv );
+	fixed4 texcol = tex2D( _MainTex, i.uv );
 	clip( texcol.a*_Color.a - _Cutoff );
 	
 	SHADOW_COLLECTOR_FRAGMENT(i)

@@ -16,7 +16,7 @@ struct Input {
 };
 sampler2D _MainTex;
 sampler2D _LightMap;
-float4 _Color;
+fixed4 _Color;
 void surf (Input IN, inout SurfaceOutput o)
 {
   o.Albedo = tex2D (_MainTex, IN.uv_MainTex).rgb * _Color;

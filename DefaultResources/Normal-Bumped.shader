@@ -14,7 +14,7 @@ CGPROGRAM
 
 sampler2D _MainTex;
 sampler2D _BumpMap;
-float4 _Color;
+fixed4 _Color;
 
 struct Input {
 	float2 uv_MainTex;
@@ -22,7 +22,7 @@ struct Input {
 };
 
 void surf (Input IN, inout SurfaceOutput o) {
-	half4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
+	fixed4 c = tex2D(_MainTex, IN.uv_MainTex) * _Color;
 	o.Albedo = c.rgb;
 	o.Alpha = c.a;
 	o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));

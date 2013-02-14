@@ -17,8 +17,8 @@ CGPROGRAM
 sampler2D _MainTex;
 sampler2D _BumpMap;
 sampler2D _Illum;
-float4 _Color;
-float _Shininess;
+fixed4 _Color;
+half _Shininess;
 
 struct Input {
 	float2 uv_MainTex;
@@ -27,8 +27,8 @@ struct Input {
 };
 
 void surf (Input IN, inout SurfaceOutput o) {
-	half4 tex = tex2D(_MainTex, IN.uv_MainTex);
-	half4 c = tex * _Color;
+	fixed4 tex = tex2D(_MainTex, IN.uv_MainTex);
+	fixed4 c = tex * _Color;
 	o.Albedo = c.rgb;
 	o.Emission = c.rgb * tex2D(_Illum, IN.uv_Illum).a;
 	o.Gloss = tex.a;
