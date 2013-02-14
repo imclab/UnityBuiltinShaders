@@ -24,13 +24,24 @@ uniform vec4 _CosTime;
 // w = 1/far plane
 uniform vec4 _ProjectionParams;
 
-uniform vec4 _ObjectSpaceCameraPos;
-uniform vec4 _ObjectSpaceLightPos0;
+// x = width
+// y = height
+// z = 1 + 1.0/width
+// w = 1 + 1.0/height
+uniform vec4 _ScreenParams;
+
+// w = 1 / uniform scale
+uniform vec4 unity_Scale;
+
+uniform vec3 _WorldSpaceCameraPos;
+uniform vec4 _WorldSpaceLightPos0;
 
 uniform mat4 _Object2World, _World2Object;
 
 uniform vec4 _LightPositionRange; // xyz = pos, w = 1/range
 
+// -------------------------------------------------------------------
+//  helper functions and macros used in many standard shaders
 
 #if defined DIRECTIONAL || defined DIRECTIONAL_COOKIE
 #define USING_DIRECTIONAL_LIGHT
@@ -44,7 +55,7 @@ uniform vec4 _LightPositionRange; // xyz = pos, w = 1/range
 #ifdef VERTEX
 
 // Computes world space light direction
-inline vec3 WorldSpaceLightDir( vec4 v )
+vec3 WorldSpaceLightDir( vec4 v )
 {
 	vec3 worldPos = (_Object2World * v).xyz;
 	#ifndef USING_LIGHT_MULTI_COMPILE

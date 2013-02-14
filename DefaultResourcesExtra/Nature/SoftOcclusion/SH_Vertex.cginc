@@ -42,7 +42,7 @@ v2f leaves(appdata_tree v)
 		#else
 			#if UNITY_HAS_LIGHT_PARAMETERS
 				float3 toLight = glstate.light[i].position.xyz - viewpos.xyz * glstate.light[i].position.w;
-				toLight.yz *= -1.0;
+				toLight.z *= -1.0;
 				lightDir.xyz = mul( (float3x3)_CameraToWorld, normalize(toLight) );
 				float lengthSq = dot(toLight, toLight);
 				atten = 1.0 / (1.0 + lengthSq * glstate.light[i].attenuation.z);
@@ -89,7 +89,7 @@ v2f bark(appdata_tree v)
 		#else
 			#if UNITY_HAS_LIGHT_PARAMETERS
 				float3 toLight = glstate.light[i].position.xyz - viewpos.xyz * glstate.light[i].position.w;
-				toLight.yz *= -1.0;
+				toLight.z *= -1.0;
 				lightDir.xyz = mul( (float3x3)_CameraToWorld, normalize(toLight) );
 				float lengthSq = dot(toLight, toLight);
 				atten = 1.0 / (1.0 + lengthSq * glstate.light[i].attenuation.z);
