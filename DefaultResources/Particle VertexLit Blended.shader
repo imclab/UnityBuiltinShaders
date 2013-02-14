@@ -6,6 +6,7 @@ Properties {
 
 SubShader {
 	Tags { "Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent" }
+	Tags { "LightMode" = "Vertex" }
 	Cull Off
 	Lighting On
 	Material { Emission [_EmisColor] }

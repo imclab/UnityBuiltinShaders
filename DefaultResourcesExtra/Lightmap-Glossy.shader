@@ -1,4 +1,4 @@
-Shader "Lightmapped/Specular" {
+Shader "Legacy Shaders/Lightmapped/Specular" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 1)
@@ -6,11 +6,5 @@ Shader "Lightmapped/Specular" {
 		_MainTex ("Base (RGB) Gloss (A)", 2D) = "white" {}
 		_LightMap ("Lightmap (RGB)", 2D) = "lightmap" { LightmapMode }
 	}
-	SubShader {
-		LOD 300
-		Tags { "RenderType"="Opaque" }
-		UsePass "Lightmapped/VertexLit/BASE"
-		UsePass "Specular/PPL"
-	}
-	FallBack "Lightmapped/VertexLit", 1
+	FallBack "Legacy Shaders/Lightmapped/Diffuse"
 }

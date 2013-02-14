@@ -21,17 +21,7 @@ struct appdata_tree_billboard {
 	float2 texcoord1 : TEXCOORD1;	// Billboard extrusion
 };
 
-struct appdata_grass {
-	float4 vertex : POSITION;
-	float4 color : COLOR;			// XSize, ySize, wavyness, unused
-	float4 texcoord : TEXCOORD0;	// UV Coordinates 
-	float4 texcoord1 : TEXCOORD1;	// Billboard extrusion
-};
-
-
-
 // ---- Grass helpers
-
 
 // Calculate a 4 fast sine-cosine pairs
 // val: 	the 4 input values - each must be in the range (0 to 1)
@@ -63,22 +53,15 @@ void FastSinCos (float4 val, out float4 s, out float4 c) {
 
 
 uniform float4 _WavingTint;
-uniform float4 _WaveAndDistance; // wind speed, wave size, wind amount, max sqr distance
-uniform float4 _CameraPosition;
+uniform float4 _WaveAndDistance;	// wind speed, wave size, wind amount, max sqr distance
+uniform float4 _CameraPosition;		// .xyz = camera position, .w = 1 / (max sqr distance)
 uniform float3 _CameraRight, _CameraUp;
 
-
-void TerrainWaveGrass (inout float4 vertex, float waveAmount, float3 color, out float4 outColor)
+float4 TerrainWaveGrass (inout float4 vertex, float waveAmount, float4 color)
 {
-	// Intel GMA X3100 cards on OS X have bugs in this vertex shader part (OS X 10.5.0-10.5.2),
-	// transforming vertices to almost infinities.
-	// So we multi-compile shaders, and use a non-waving one on X3100 cards.
-	
-	#ifndef INTEL_GMA_X3100_WORKAROUND
-	
-	const float4 _waveXSize = float4(0.012, 0.02, 0.06, 0.024) * _WaveAndDistance.y;
-	const float4 _waveZSize = float4 (0.006, .02, 0.02, 0.05) * _WaveAndDistance.y;
-	const float4 waveSpeed = float4 (0.3, .5, .4, 1.2) * 4;
+	float4 _waveXSize = float4(0.012, 0.02, 0.06, 0.024) * _WaveAndDistance.y;
+	float4 _waveZSize = float4 (0.006, .02, 0.02, 0.05) * _WaveAndDistance.y;
+	float4 waveSpeed = float4 (0.3, .5, .4, 1.2) * 4;
 
 	float4 _waveXmove = float4(0.012, 0.02, -0.06, 0.048) * 2;
 	float4 _waveZmove = float4 (0.006, .02, -0.02, 0.1);
@@ -106,19 +89,17 @@ void TerrainWaveGrass (inout float4 vertex, float waveAmount, float3 color, out 
 	waveMove.x = dot (s, _waveXmove);
 	waveMove.z = dot (s, _waveZmove);
 
-	vertex.xz -= waveMove.xz * _WaveAndDistance.z;	
-	// Apply Color animation
+	vertex.xz -= waveMove.xz * _WaveAndDistance.z;
+	
+	// apply color animation
 	float3 waveColor = lerp (float3(0.5,0.5,0.5), _WavingTint.rgb, lighting);
 	
+	// Fade the grass out before detail distance.
+	// Saturate because Radeon HD drivers on OS X 10.4.10 don't saturate vertex colors properly.
+	float3 offset = vertex.xyz - _CameraPosition.xyz;
+	color.a = saturate (2 * (_WaveAndDistance.w - dot (offset, offset)) * _CameraPosition.w);
 	
-	// Dry - dyning color interpolate (static)
-	outColor.rgb = color * waveColor * 2;
-	
-	#else
-	
-	outColor.rgb = color;
-	
-	#endif
+	return half4(2 * waveColor * color.rgb, color.a);
 }
 
 void TerrainBillboardGrass( inout float4 pos, float2 offset )
@@ -126,42 +107,254 @@ void TerrainBillboardGrass( inout float4 pos, float2 offset )
 	float3 grasspos = pos.xyz - _CameraPosition.xyz;
 	if (dot(grasspos, grasspos) > _WaveAndDistance.w)
 		offset = 0.0;
-    pos.xyz += (offset.x - 0.5) * _CameraRight.xyz;
+    pos.xyz += offset.x * _CameraRight.xyz;
 	pos.xyz += offset.y * _CameraUp.xyz;
+}
+
+// Grass: appdata_full usage
+// color		- .xyz = color, .w = wave scale
+// normal		- normal
+// tangent.xy	- billboard extrusion
+// texcoord		- UV coords
+// texcoord1	- 2nd UV coords
+
+void WavingGrassVert (inout appdata_full v)
+{
+	// MeshGrass v.color.a: 1 on top vertices, 0 on bottom vertices
+	// _WaveAndDistance.z == 0 for MeshLit
+	float waveAmount = v.color.a * _WaveAndDistance.z;
+
+	v.color = TerrainWaveGrass (v.vertex, waveAmount, v.color);
+}
+
+void WavingGrassBillboardVert (inout appdata_full v)
+{
+	TerrainBillboardGrass (v.vertex, v.tangent.xy);
+	// wave amount defined by the grass height
+	float waveAmount = v.tangent.y;
+	v.color = TerrainWaveGrass (v.vertex, waveAmount, v.color);
 }
 
 
 // ---- Tree helpers
 
-
 uniform float4 _Scale;
 uniform float4x4 _TerrainEngineBendTree;
+
+uniform float4 _SquashPlaneNormal;
+uniform float _SquashAmount;
+
+inline float4 Squash(in float4 pos)
+{
+	// To squash the tree the vertex needs to be moved in the direction
+	// of the squash plane. The plane is defined by the the:
+	// plane point - point lying on the plane, defined in model space
+	// plane normal - _SquashPlaneNormal.xyz
+	
+	float3 projectedVertex = pos.xyz;
+	float3 planePoint = float3(0, _SquashPlaneNormal.w, 0);
+	float3 planeNormal = _SquashPlaneNormal.xyz;
+	
+	projectedVertex += dot(planeNormal, (planePoint - pos)) * planeNormal;
+	pos = float4(lerp(projectedVertex, pos.xyz, _SquashAmount), 1);
+	
+	return pos;
+}
 
 void TerrainAnimateTree( inout float4 pos, float alpha )
 {
 	pos.xyz *= _Scale.xyz;
-	float3 bent = mul((float4x3)_TerrainEngineBendTree, pos.xyz);
+	float3 bent = mul(_TerrainEngineBendTree, float4(pos.xyz, 0.0)).xyz;
 	pos.xyz = lerp( pos.xyz, bent, alpha );
+	
+	pos = Squash(pos);
 }
 
 
 // ---- Billboarded tree helpers
 
-
-uniform float3 _TreeBillboardCameraRight, _TreeBillboardCameraUp;
+uniform float3 _TreeBillboardCameraRight;
+uniform float4 _TreeBillboardCameraUp;
+uniform float4 _TreeBillboardCameraFront;
 uniform float4 _TreeBillboardCameraPos;
 uniform float4 _TreeBillboardDistances; // x = max distance ^ 2
 
-void TerrainBillboardTree( inout float4 pos, float2 offset )
+
+void TerrainBillboardTree( inout float4 pos, float2 offset, float offsetz )
 {
-	float3 treePos = pos.xyz - _TreeBillboardCameraPos;
+	float3 treePos = pos.xyz - _TreeBillboardCameraPos.xyz;
 	float treeDistanceSqr = dot(treePos, treePos);
 	if( treeDistanceSqr > _TreeBillboardDistances.x )
 		offset.xy = 0.0;
-	pos.xyz += offset.x * _TreeBillboardCameraRight.xyz;
-	pos.xyz += offset.y * _TreeBillboardCameraUp.xyz;
+	pos.xyz += _TreeBillboardCameraRight.xyz * offset.x;
+	
+	// tree billboards can have non-uniform scale,
+	// so when looking from above (or bellow) we must use
+	// billboard width as billboard height
+	
+	// 1) non-compensating
+	//pos.xyz += _TreeBillboardCameraUp.xyz * offset.y;
+	
+	// 2) correct compensating (using elipse-radius formula)
+	//float alpha = _TreeBillboardCameraPos.w;
+	//float a = offset.y;
+	//float b = offset.x;
+	//float r = abs(a * b) / sqrt(sqr(a * sin(alpha)) + sqr(b * cos(alpha)));	
+	//pos.xyz += _TreeBillboardCameraUp.xyz * sign(a) * r;
+	
+	// 3) incorrect compensating (using lerp)
+	// _TreeBillboardCameraPos.w contains ImposterRenderTexture::GetBillboardAngleFactor()
+	//float billboardAngleFactor = _TreeBillboardCameraPos.w;
+	//float r = lerp(offset.y, offsetz, billboardAngleFactor);	
+	//pos.xyz += _TreeBillboardCameraUp.xyz * r;
+	
+	// so now we take solution #3 and complicate it even further...
+	// 
+	// case 49851: Flying trees
+	// The problem is that tree billboard is fixed on it's center, which means
+	// the root of the tree is not fixed and can float around. This can be quite visible
+	// on slopes (checkout the case on fogbugz for screenshots).
+	// This can be fixed by introducing another billboard fixation mode - billboard is 
+	// fixed to the bottom center point, i.e. approximatelly where root of the tree 
+	// should be. Problem is that we can't just use that fixation point all the time,
+	// because it doesn't work when looking from above, so we have to interpolate between
+	// these two modes:
+	// 1) Use bottom-center when looking from front
+	// 2) User center-center when looking from above/bellow
+	// The blend between the modes is controlled by billboardModeFactor
+	// 
+	// billboardRootOffsetFactor is used for offsetting billboard, so root of the tree
+	// in the billboard texture matches root of the tree in physical space. This mismatch
+	// is caused by the fact that tree is always renderer into center of tree billboard.
+		
+	
+	// _TreeBillboardCameraPos.w contains ImposterRenderTexture::GetBillboardAngleFactor()
+	float billboardAngleFactor = _TreeBillboardCameraPos.w;
+	// non-uniform scale, see "3) incorrect compensating (using lerp)" above
+	float radius = lerp(offset.y, offsetz, billboardAngleFactor);
+		
+	// _TreeBillboardCameraUp.w contains ImposterRenderTexture::GetBillboardModeFactor()
+	float billboardModeFactor = _TreeBillboardCameraUp.w;
+	
+	// _TreeBillboardCameraFront.w contains ImposterRenderTexture::GetBillboardRootOffsetFactor()
+	float billboardRootOffsetFactor = _TreeBillboardCameraFront.w;
+	
+	pos.xyz += lerp(
+		// bottom-center billboard mode
+		_TreeBillboardCameraUp.xyz * max(0, radius) * 2 - float3(0, 1, 0) * abs(offset.y) - _TreeBillboardCameraUp.xyz * abs(radius) * billboardRootOffsetFactor,
+		// center-center billboard mode
+		_TreeBillboardCameraUp.xyz * radius,
+		billboardModeFactor
+	);
 }
 
 
+// ---- Tree Creator
+
+float4 _Wind;
+
+// Expand billboard and modify normal + tangent to fit
+inline void ExpandBillboard (in float4x4 mat, inout float4 pos, inout float3 normal, inout float4 tangent)
+{
+	// tangent.w = 0 if this is a billboard
+	float isBillboard = 1.0f - abs(tangent.w);
+	
+	// billboard normal
+	float3 norb = normalize(mul(float4(normal, 0), mat));
+	
+	// billboard tangent
+	float3 tanb = normalize(mul(float4(tangent.xyz, 0.0f), mat));
+	
+	pos += mul(float4(normal.xy, 0, 0), mat) * isBillboard;
+	normal = lerp(normal, norb, isBillboard);
+	tangent = lerp(tangent, float4(tanb, -1.0f), isBillboard);
+}
+
+float4 SmoothCurve( float4 x ) {   
+	return x * x *( 3.0 - 2.0 * x );   
+}
+float4 TriangleWave( float4 x ) {   
+	return abs( frac( x + 0.5 ) * 2.0 - 1.0 );   
+}
+float4 SmoothTriangleWave( float4 x ) {   
+	return SmoothCurve( TriangleWave( x ) );   
+}
+
+// Detail bending
+inline float4 AnimateVertex(float4 pos, float3 normal, float4 animParams)
+{	
+	// animParams stored in color
+	// animParams.x = branch phase
+	// animParams.y = edge flutter factor
+	// animParams.z = primary factor
+	// animParams.w = secondary factor
+
+	float fDetailAmp = 0.1f;
+	float fBranchAmp = 0.3f;
+	
+	// Phases (object, vertex, branch)
+	float fObjPhase = dot(_Object2World[3].xyz, 1);
+	float fBranchPhase = fObjPhase + animParams.x;
+	
+	float fVtxPhase = dot(pos.xyz, animParams.y + fBranchPhase);
+	
+	// x is used for edges; y is used for branches
+	float2 vWavesIn = _Time.yy + float2(fVtxPhase, fBranchPhase );
+	
+	// 1.975, 0.793, 0.375, 0.193 are good frequencies
+	float4 vWaves = (frac( vWavesIn.xxyy * float4(1.975, 0.793, 0.375, 0.193) ) * 2.0 - 1.0);
+	
+	vWaves = SmoothTriangleWave( vWaves );
+	float2 vWavesSum = vWaves.xz + vWaves.yw;
+
+	// Edge (xz) and branch bending (y)
+	float3 bend = animParams.y * fDetailAmp * normal.xyz;
+	bend.y = animParams.w * fBranchAmp;
+	pos.xyz += ((vWavesSum.xyx * bend) + (_Wind.xyz * vWavesSum.y * animParams.w)) * _Wind.w; 
+
+	// Primary bending
+	// Displace position
+	pos.xyz += animParams.z * _Wind.xyz;
+	
+	return pos;
+}
+
+void TreeVertBark (inout appdata_full v)
+{
+	v.vertex.xyz *= _Scale.xyz;
+	v.vertex = AnimateVertex(v.vertex, v.normal, float4(v.color.xy, v.texcoord1.xy));
+	
+	v.vertex = Squash(v.vertex);
+	
+	v.color = float4 (1, 1, 1, v.color.a);
+	v.normal = normalize(v.normal);
+	v.tangent.xyz = normalize(v.tangent.xyz); 
+}
+
+void TreeVertLeaf (inout appdata_full v)
+{
+	ExpandBillboard (UNITY_MATRIX_IT_MV, v.vertex, v.normal, v.tangent);
+	v.vertex.xyz *= _Scale.xyz;
+	v.vertex = AnimateVertex (v.vertex,v.normal, float4(v.color.xy, v.texcoord1.xy));
+	
+	v.vertex = Squash(v.vertex);
+	
+	v.color = float4 (1, 1, 1, v.color.a);
+	v.normal = normalize(v.normal);
+	v.tangent.xyz = normalize(v.tangent.xyz);
+}
+
+
+// ---- Obsolete
+
+// Use appdata_full instead
+struct appdata_grass {
+	float4 vertex : POSITION;
+	float4 tangent : TANGENT;
+	float3 normal : NORMAL;			// normal
+	float4 color : COLOR;			// XSize, ySize, wavyness, unused
+	float4 texcoord : TEXCOORD0;	// UV Coordinates 
+	float4 texcoord1 : TEXCOORD1;	// Billboard extrusion
+};
 
 #endif

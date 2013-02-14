@@ -7,33 +7,56 @@ Properties {
 	_Parallax ("Height", Range (0.005, 0.08)) = 0.02
 	_MainTex ("Base (RGB) Gloss (A)", 2D) = "white" { }
 	_Cube ("Reflection Cubemap", Cube) = "_Skybox" { TexGen CubeReflect }
-	_BumpMap ("Bumpmap (RGB) Height (A)", 2D) = "bump" { }
+	_BumpMap ("Normalmap", 2D) = "bump" { }
+	_ParallaxMap ("Heightmap (A)", 2D) = "black" {}
 }
-Category {
+SubShader {
 	Tags { "RenderType"="Opaque" }
 	LOD 600
-	Blend AppSrcAdd AppDstAdd
-	Fog { Color [_AddFog] }
 	
-	SubShader {
-		UsePass "Reflective/Bumped Unlit/BASE" 
-		Pass {
-			Name "BASE"
-			Tags {"LightMode" = "Vertex"}
-			Material {
-				Diffuse [_Color]
-				Ambient [_PPLAmbient]
-				Shininess [_Shininess]
-				Specular [_SpecColor]
-			}
-			Lighting On
-			SeparateSpecular on
-			SetTexture [_MainTex] { combine texture * primary DOUBLE, texture * primary }
-		}
-		UsePass "Parallax Specular/PPL"
-	}
+CGPROGRAM
+#pragma surface surf BlinnPhong
+#pragma target 3.0
+
+sampler2D _MainTex;
+sampler2D _BumpMap;
+samplerCUBE _Cube;
+sampler2D _ParallaxMap;
+
+float4 _Color;
+float4 _ReflectColor;
+float _Shininess;
+float _Parallax;
+
+struct Input {
+	float2 uv_MainTex;
+	float2 uv_BumpMap;
+	float3 worldRefl;
+	float3 viewDir;
+	INTERNAL_DATA
+};
+
+void surf (Input IN, inout SurfaceOutput o) {
+	half h = tex2D (_ParallaxMap, IN.uv_BumpMap).w;
+	float2 offset = ParallaxOffset (h, _Parallax, IN.viewDir);
+	IN.uv_MainTex += offset;
+	IN.uv_BumpMap += offset;
+	
+	half4 tex = tex2D(_MainTex, IN.uv_MainTex);
+	o.Albedo = tex.rgb * _Color.rgb;
+	o.Gloss = tex.a;
+	o.Specular = _Shininess;
+	
+	o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));
+	
+	float3 worldRefl = WorldReflectionVector (IN, o.Normal);
+	half4 reflcol = texCUBE (_Cube, worldRefl);
+	reflcol *= tex.a;
+	o.Emission = reflcol.rgb * _ReflectColor.rgb;
+	o.Alpha = reflcol.a * _ReflectColor.a;
+}
+ENDCG
 }
 
-FallBack "Reflective/Bumped Specular", 1
-
+FallBack "Reflective/Bumped Specular"
 }

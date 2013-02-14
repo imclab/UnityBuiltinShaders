@@ -24,16 +24,11 @@ uniform vec4 _CosTime;
 // w = 1/far plane
 uniform vec4 _ProjectionParams;
 
-uniform vec4 _PPLAmbient;
-
 uniform vec4 _ObjectSpaceCameraPos;
 uniform vec4 _ObjectSpaceLightPos0;
-uniform vec4 _ModelLightColor0;
-uniform vec4 _SpecularLightColor0;
 
-uniform mat4 _Light2World0, _World2Light0, _Object2World, _World2Object, _Object2Light0;
+uniform mat4 _Object2World, _World2Object;
 
-uniform vec4 _LightDirectionBias; // xyz = direction, w = bias
 uniform vec4 _LightPositionRange; // xyz = pos, w = 1/range
 
 
@@ -48,33 +43,48 @@ uniform vec4 _LightPositionRange; // xyz = pos, w = 1/range
 
 #ifdef VERTEX
 
-// Computes final clip space position and fog parameter
-void PositionFog(vec3 vertex)
+// Computes world space light direction
+inline vec3 WorldSpaceLightDir( vec4 v )
 {
-	gl_Position = gl_ModelViewProjectionMatrix * vec4(vertex, 1.0);
-	gl_FogFragCoord = vertex.z;
-}
-
-// Computes object space light direction
-vec3 ObjSpaceLightDir(vec4 vertex)
-{
+	vec3 worldPos = (_Object2World * v).xyz;
 	#ifndef USING_LIGHT_MULTI_COMPILE
-		return _ObjectSpaceLightPos0.xyz - vertex.xyz * _ObjectSpaceLightPos0.w;
+		return _WorldSpaceLightPos0.xyz - worldPos * _WorldSpaceLightPos0.w;
 	#else
 		#ifndef USING_DIRECTIONAL_LIGHT
-		return _ObjectSpaceLightPos0.xyz - vertex.xyz;
+		return _WorldSpaceLightPos0.xyz - worldPos;
 		#else
-		return _ObjectSpaceLightPos0.xyz;
+		return _WorldSpaceLightPos0.xyz;
 		#endif
 	#endif
 }
 
-// Computes object space view direction
-vec3 ObjSpaceViewDir(vec4 vertex)
+// Computes object space light direction
+vec3 ObjSpaceLightDir( vec4 v )
 {
-	return _ObjectSpaceCameraPos - vertex.xyz;
+	vec3 objSpaceLightPos = (_World2Object * _WorldSpaceLightPos0).xyz;
+	#ifndef USING_LIGHT_MULTI_COMPILE
+		return objSpaceLightPos.xyz - v.xyz * _WorldSpaceLightPos0.w;
+	#else
+		#ifndef USING_DIRECTIONAL_LIGHT
+		return objSpaceLightPos.xyz - v.xyz;
+		#else
+		return objSpaceLightPos.xyz;
+		#endif
+	#endif
 }
 
+// Computes world space view direction
+vec3 WorldSpaceViewDir( vec4 v )
+{
+	return _WorldSpaceCameraPos.xyz - (_Object2World * v).xyz;
+}
+
+// Computes object space view direction
+vec3 ObjSpaceViewDir( vec4 v )
+{
+	vec3 objSpaceCameraPos = (_World2Object * vec4(_WorldSpaceCameraPos.xyz, 1.0)).xyz * unity_Scale.w;
+	return objSpaceCameraPos - v.xyz;
+}
 
 // Declares 3x3 matrix 'rotation', filled with tangent space basis
 #define TANGENT_SPACE_ROTATION \
@@ -92,42 +102,6 @@ vec3 ObjSpaceViewDir(vec4 vertex)
 
 #endif
 
-// Calculates Lambertian (diffuse) ligting model
-vec4 DiffuseLight( vec3 lightDir, vec3 normal, vec4 color, float atten )
-{
-	#ifndef USING_DIRECTIONAL_LIGHT
-	lightDir = normalize(lightDir);
-	#endif
-	
-	float diffuse = dot( normal, lightDir );
-	
-	vec4 c;
-	c.rgb = color.rgb * _ModelLightColor0.rgb * (diffuse * atten * 2.0);
-	c.a = 0.0; // diffuse passes by default don't contribute to overbright
-	return c;
-}
-
-
-// Calculates Blinn-Phong (specular) lighting model
-vec4 SpecularLight( vec3 lightDir, vec3 viewDir, vec3 normal, vec4 color, float specK, float atten )
-{
-	#ifndef USING_DIRECTIONAL_LIGHT
-	lightDir = normalize(lightDir);
-	#endif
-	viewDir = normalize(viewDir);
-	vec3 h = normalize( lightDir + viewDir );
-	
-	float diffuse = dot( normal, lightDir );
-	
-	float nh = clamp( dot( h, normal ), 0.0, 1.0 );
-	float spec = pow( nh, specK ) * color.a;
-	spec *= diffuse;
-	
-	vec4 c;
-	c.rgb = (color.rgb * _ModelLightColor0.rgb * diffuse + _SpecularLightColor0.rgb * spec) * (atten * 2.0);
-	c.a = _SpecularLightColor0.a * spec * atten; // specular passes by default put highlights to overbright
-	return c;
-}
 
 
 // Calculates UV offset for parallax bump mapping
@@ -147,18 +121,4 @@ float Luminance( vec3 c )
 }
 
 
-uniform vec4 _RGBAEncodeDot;	// 1.0, 255.0, 65025.0, 160581375.0
-uniform vec4 _RGBAEncodeBias;	// around -0.5/255.0, depending on hardware
-uniform vec4 _RGBADecodeDot;	// 1.0, 1/255.0, 1/65025.0, 1/160581375.0
-
-// Encoding/decocing 0..1 floats into 8 bit RGBA
-vec4 EncodeFloatRGBA( float v )
-{
-	return fract(_RGBAEncodeDot * v) + _RGBAEncodeBias;
-}
-
-float DecodeFloatRGBA( vec4 rgba )
-{
-	return dot( rgba, _RGBADecodeDot );
-}
 #endif // VERTEX

@@ -4,34 +4,45 @@ Properties {
 	_ReflectColor ("Reflection Color", Color) = (1,1,1,0.5)
 	_MainTex ("Base (RGB) RefStrength (A)", 2D) = "white" {}
 	_Cube ("Reflection Cubemap", Cube) = "_Skybox" { TexGen CubeReflect }
-	_BumpMap ("Bumpmap (RGB)", 2D) = "bump" {}
+	_BumpMap ("Normalmap", 2D) = "bump" {}
 }
 
-Category {
+SubShader {
 	Tags { "RenderType"="Opaque" }
 	LOD 300
-	Blend AppSrcAdd AppDstAdd
-	Fog { Color [_AddFog] }
 	
-	// ------------------------------------------------------------------
-	// ARB fragment program / Radeon 9000
+CGPROGRAM
+#pragma surface surf Lambert
+
+sampler2D _MainTex;
+sampler2D _BumpMap;
+samplerCUBE _Cube;
+
+float4 _Color;
+float4 _ReflectColor;
+
+struct Input {
+	float2 uv_MainTex;
+	float2 uv_BumpMap;
+	float3 worldRefl;
+	INTERNAL_DATA
+};
+
+void surf (Input IN, inout SurfaceOutput o) {
+	half4 tex = tex2D(_MainTex, IN.uv_MainTex);
+	half4 c = tex * _Color;
+	o.Albedo = c.rgb;
 	
-	SubShader {
-		UsePass "Reflective/Bumped Unlit/BASE" 
-		Pass { 
-			Name "BASE"
-			Tags {"LightMode" = "Vertex"}
-			Blend AppSrcAdd AppDstAdd
-			Material {
-				Diffuse [_Color]
-			}
-			Lighting On
-			SetTexture [_MainTex] { combine texture alpha * primary DOUBLE, texture * primary }
-		}
-		UsePass "Bumped Diffuse/PPL"
-	}
+	o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));
+	
+	float3 worldRefl = WorldReflectionVector (IN, o.Normal);
+	half4 reflcol = texCUBE (_Cube, worldRefl);
+	reflcol *= tex.a;
+	o.Emission = reflcol.rgb * _ReflectColor.rgb;
+	o.Alpha = reflcol.a * _ReflectColor.a;
+}
+ENDCG
 }
 
-FallBack "Reflective/VertexLit", 1
-
+FallBack "Reflective/VertexLit"
 }

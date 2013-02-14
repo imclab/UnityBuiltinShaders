@@ -11,11 +11,9 @@ Properties {
 Category {
 	Tags { "RenderType"="Opaque" }
 	LOD 150
-	Blend AppSrcAdd AppDstAdd
-	Fog { Color [_AddFog] }
 
 	// ------------------------------------------------------------------
-	// ARB fragment program
+	// Pixel shader cards
 	
 	SubShader {
 	
@@ -24,14 +22,14 @@ Category {
 			Name "BASE"
 			Tags {"LightMode" = "Always"}
 CGPROGRAM
+#pragma exclude_renderers gles xbox360 ps3
 #pragma vertex vert
 #pragma fragment frag
-#pragma fragmentoption ARB_fog_exp2
 #pragma fragmentoption ARB_precision_hint_fastest
 #include "UnityCG.cginc"
 
 struct v2f {
-	V2F_POS_FOG;
+	float4 pos : SV_POSITION;
 	float2 uv : TEXCOORD0;
 	float3 I : TEXCOORD1;
 };
@@ -41,15 +39,13 @@ uniform float4 _MainTex_ST;
 v2f vert(appdata_tan v)
 {
 	v2f o;
-	PositionFog( v.vertex, o.pos, o.fog );
+	o.pos = mul (UNITY_MATRIX_MVP, v.vertex);
 	o.uv = TRANSFORM_TEX(v.texcoord,_MainTex);
 
-	// calculate object space reflection vector	
-	float3 viewDir = ObjSpaceViewDir( v.vertex );
-	float3 I = reflect( -viewDir, v.normal );
-	
-	// transform to world space reflection vector
-	o.I = mul( (float3x3)_Object2World, I );
+	// calculate world space reflection vector	
+	float3 viewDir = WorldSpaceViewDir( v.vertex );
+	float3 worldN = mul((float3x3)_Object2World, v.normal * unity_Scale.w);
+	o.I = reflect( -viewDir, worldN );
 	
 	return o; 
 }
@@ -68,8 +64,10 @@ half4 frag (v2f i) : COLOR
 ENDCG
 		}
 		
-		// Second pass adds vertex lighting
+		// Vertex Lit
 		Pass {
+			Tags { "LightMode" = "Vertex" }
+			Blend One One ZWrite Off Fog { Color (0,0,0,0) }
 			Lighting On
 			Material {
 				Diffuse [_Color]
@@ -79,8 +77,8 @@ ENDCG
 			}
 			SeparateSpecular On
 CGPROGRAM
+#pragma exclude_renderers gles xbox360 ps3
 #pragma fragment frag
-#pragma fragmentoption ARB_fog_exp2
 #pragma fragmentoption ARB_precision_hint_fastest
 
 #include "UnityCG.cginc"
@@ -105,91 +103,66 @@ half4 frag (v2f i) : COLOR
 } 
 ENDCG
 			SetTexture[_MainTex] {}
-		}		
-	}
-	
-	// ------------------------------------------------------------------
-	// Radeon 9000
-	
-	SubShader {
-	
-		// First pass does reflection cubemap
-		Pass { 
-			Name "BASE"
-			Tags {"LightMode" = "Always"}
-CGPROGRAM
-#pragma vertex vert
-#include "UnityCG.cginc"
-
-struct v2f {
-	V2F_POS_FOG;
-	float2 uv : TEXCOORD0;
-	float3 I : TEXCOORD1;
-};
-
-uniform float4 _MainTex_ST;
-
-v2f vert(appdata_tan v)
-{
-	v2f o;
-	PositionFog( v.vertex, o.pos, o.fog );
-	o.uv = TRANSFORM_TEX(v.texcoord,_MainTex);
-
-	// calculate object space reflection vector	
-	float3 viewDir = ObjSpaceViewDir( v.vertex );
-	float3 I = reflect( -viewDir, v.normal );
-	
-	// transform to world space reflection vector
-	o.I = mul( (float3x3)_Object2World, I );
-	
-	return o; 
-}
-ENDCG
-			Program "" {
-				SubProgram {
-					Local 0, [_ReflectColor]
-					"!!ATIfs1.0
-					StartConstants;
-						CONSTANT c0 = program.local[0];
-					EndConstants;
-					StartOutputPass;
-						SampleMap r0, t0.str;
-						SampleMap r1, t1.str;
-						MUL r1, r1, r0.a;
-						MUL r0, r1, c0;
-					EndPass;
-					"
-				}
-			}
-			SetTexture [_MainTex] {combine texture}
-			SetTexture [_Cube] {combine texture}
 		}
 		
-		// Second pass adds vertex lighting
+		// Lightmapped
 		Pass {
-			Material {
-				Diffuse [_Color]
-				Ambient [_Color]
-				Shininess [_Shininess]
-				Specular [_SpecColor]
-				Emission [_Emission]
+			Tags { "LightMode" = "VertexLM" }
+			Blend One One ZWrite Off Fog { Color (0,0,0,0) }
+			ColorMask RGB
+			
+			BindChannels {
+				Bind "Vertex", vertex
+				Bind "normal", normal
+				Bind "texcoord1", texcoord0 // lightmap uses 2nd uv
+				Bind "texcoord", texcoord1 // main uses 1st uv
 			}
-			Lighting On
-			SeparateSpecular On
-			SetTexture [_MainTex] {
+			
+			SetTexture [unity_Lightmap] {
+				matrix [unity_LightmapMatrix]
 				constantColor [_Color]
-				Combine texture * previous DOUBLE, texture * constant
+				combine texture * constant
+			}
+			SetTexture [_MainTex] {
+				combine texture * previous DOUBLE, texture * primary
+			}
+		}
+		
+		// Lightmapped, encoded as RGBM
+		Pass {
+			Tags { "LightMode" = "VertexLMRGBM" }
+			Blend One One ZWrite Off Fog { Color (0,0,0,0) }
+			ColorMask RGB
+			
+			BindChannels {
+				Bind "Vertex", vertex
+				Bind "normal", normal
+				Bind "texcoord1", texcoord0 // lightmap uses 2nd uv
+				Bind "texcoord1", texcoord1 // unused
+				Bind "texcoord", texcoord2 // main uses 1st uv
+			}
+			
+			SetTexture [unity_Lightmap] {
+				matrix [unity_LightmapMatrix]
+				combine texture * texture alpha DOUBLE
+			}
+			SetTexture [unity_Lightmap] {
+				constantColor [_Color]
+				combine previous * constant
+			}
+			SetTexture [_MainTex] {
+				combine texture * previous QUAD, texture * primary
 			}
 		}
 	}
-
+	
 	// ------------------------------------------------------------------
 	// Old cards
 	
 	SubShader {
 		Pass { 
 			Name "BASE"
-			Tags {"LightMode" = "Always"}
+			Tags { "LightMode" = "Vertex" }
 			Material {
 				Diffuse [_Color]
 				Ambient (1,1,1,1)
@@ -209,6 +182,5 @@ ENDCG
 }
 
 // Fallback for cards that don't do cubemapping
-FallBack "VertexLit", 1
-
+FallBack "VertexLit"
 }

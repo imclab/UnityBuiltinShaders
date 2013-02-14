@@ -1,68 +1,68 @@
-Shader "Nature/Soft Occlusion Leaves" {
+Shader "Nature/Tree Soft Occlusion Leaves" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_MainTex ("Main Texture", 2D) = "white" {  }
-		_Cutoff ("Base Alpha cutoff", Range (.5,.9)) = .5
-		_BaseLight ("BaseLight", range (0, 1)) = 0.35
-		_AO ("Amb. Occlusion", range (0, 10)) = 2.4
-		_Occlusion ("Dir Occlusion", range (0, 20)) = 7.5
+		_Cutoff ("Alpha cutoff", Range(0.25,0.9)) = 0.5
+		_BaseLight ("Base Light", Range(0, 1)) = 0.35
+		_AO ("Amb. Occlusion", Range(0, 10)) = 2.4
+		_Occlusion ("Dir Occlusion", Range(0, 20)) = 7.5
+		
+		// These are here only to provide default values
 		_Scale ("Scale", Vector) = (1,1,1,1)
+		_SquashAmount ("Squash", Float) = 1
 	}
+	
 	SubShader {
 		Tags {
 			"Queue" = "Transparent-99"
 			"IgnoreProjector"="True"
-			"BillboardShader" = "Hidden/TerrainEngine/Soft Occlusion Leaves rendertex"
 			"RenderType" = "TreeTransparentCutout"
 		}
 		Cull Off
 		ColorMask RGB
 		
 		Pass {
+			Lighting On
+		
 			CGPROGRAM
 			#pragma vertex leaves
+			#pragma fragment frag 
 			#include "SH_Vertex.cginc"
-			ENDCG
-
-			AlphaTest GEqual [_Cutoff]
-			ZWrite On
 			
-			SetTexture [_MainTex] { combine primary * texture DOUBLE, texture }
-		}
-		
-		Pass {
-			Tags { "RequireOptions" = "SoftVegetation" }
-			CGPROGRAM
-			#pragma vertex leaves
-			#include "SH_Vertex.cginc"
+			sampler2D _MainTex;
+			float _Cutoff;
+			
+			half4 frag(v2f input) : COLOR
+			{
+				half4 c = tex2D( _MainTex, input.uv.xy);
+				c.rgb *= 2.0f * input.color.rgb;
+				
+				clip (c.a - _Cutoff);
+				
+				return c;
+			}
 			ENDCG
-			// the texture is premultiplied alpha!
-			Blend SrcAlpha OneMinusSrcAlpha
-			ZWrite Off
-
-			SetTexture [_MainTex] { combine primary * texture DOUBLE, texture }
 		}
 		
-		// Pass to render object as a shadow caster
 		Pass {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
 			
 			Fog {Mode Off}
 			ZWrite On ZTest Less Cull Off
-			Offset [_ShadowBias], [_ShadowBiasSlope]
+			Offset 1, 1
 	
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-			#pragma multi_compile SHADOWS_NATIVE SHADOWS_CUBE
 			#pragma fragmentoption ARB_precision_hint_fastest
+			#pragma multi_compile_shadowcaster
 			#include "UnityCG.cginc"
 			#include "TerrainEngine.cginc"
 			
 			struct v2f { 
 				V2F_SHADOW_CASTER;
-				float2  uv;
+				float2 uv : TEXCOORD1;
 			};
 			
 			struct appdata {
@@ -79,8 +79,8 @@ Shader "Nature/Soft Occlusion Leaves" {
 				return o;
 			}
 			
-			uniform sampler2D _MainTex;
-			uniform float _Cutoff;
+			sampler2D _MainTex;
+			float _Cutoff;
 					
 			float4 frag( v2f i ) : COLOR
 			{
@@ -96,12 +96,36 @@ Shader "Nature/Soft Occlusion Leaves" {
 		Tags {
 			"Queue" = "Transparent-99"
 			"IgnoreProjector"="True"
-			"BillboardShader" = "Hidden/TerrainEngine/Soft Occlusion Leaves rendertex"
+			"RenderType" = "TreeTransparentCutout"
+		}
+		Cull Off
+		ColorMask RGB
+		
+		Pass {
+			CGPROGRAM
+			#pragma exclude_renderers gles xbox360 ps3
+			#pragma vertex leaves
+			#include "SH_Vertex.cginc"
+			ENDCG
+
+			Lighting On
+			AlphaTest GEqual [_Cutoff]
+			ZWrite On
+			
+			SetTexture [_MainTex] { combine primary * texture DOUBLE, texture }
+		}
+	}
+	
+	SubShader {
+		Tags {
+			"Queue" = "Transparent-99"
+			"IgnoreProjector"="True"
 			"RenderType" = "TransparentCutout"
 		}
 		Cull Off
 		ColorMask RGB
 		Pass {
+			Tags { "LightMode" = "Vertex" }
 			AlphaTest GEqual [_Cutoff]
 			Lighting On
 			Material {
@@ -111,6 +135,7 @@ Shader "Nature/Soft Occlusion Leaves" {
 			SetTexture [_MainTex] { combine primary * texture DOUBLE, texture }
 		}		
 	}
-	
+
+	Dependency "BillboardShader" = "Hidden/Nature/Tree Soft Occlusion Leaves Rendertex"
 	Fallback Off
 }

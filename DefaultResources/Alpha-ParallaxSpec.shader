@@ -5,91 +5,45 @@ Properties {
 	_Shininess ("Shininess", Range (0.01, 1)) = 0.078125
 	_Parallax ("Height", Range (0.005, 0.08)) = 0.02
 	_MainTex ("Base (RGB) TransGloss (A)", 2D) = "white" {}
-	_BumpMap ("Bumpmap (RGB) Height (A)", 2D) = "bump" {}
+	_BumpMap ("Normalmap", 2D) = "bump" {}
+	_ParallaxMap ("Heightmap (A)", 2D) = "black" {}
 }
 
-Category {
+SubShader {
 	Tags {"Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent"}
 	LOD 600
-	Alphatest Greater 0
-	Fog { Color [_AddFog] }
-	ZWrite Off
-	ColorMask RGB
 	
-	// ------------------------------------------------------------------
-	// ARB fragment program
-	
-	SubShader {
-		UsePass "Transparent/Specular/BASE"
-		// Pixel lights
-		Pass {
-			Name "PPL"
-			Blend SrcAlpha One
-			Tags { "LightMode" = "Pixel" }
 CGPROGRAM
-#pragma vertex vert
-#pragma fragment frag
-#pragma multi_compile_builtin_noshadows
-#pragma fragmentoption ARB_fog_exp2
-#pragma fragmentoption ARB_precision_hint_fastest
+#pragma surface surf BlinnPhong alpha
 
-#include "UnityCG.cginc"
-#include "AutoLight.cginc" 
+sampler2D _MainTex;
+sampler2D _BumpMap;
+sampler2D _ParallaxMap;
+float4 _Color;
+float _Shininess;
+float _Parallax;
 
-struct v2f {
-	V2F_POS_FOG;
-	LIGHTING_COORDS
-	float3	uvK; // xy = UV, z = specular K
-	float3	viewDirT;
-	float2	uv2;
-	float3	lightDirT;
-}; 
+struct Input {
+	float2 uv_MainTex;
+	float2 uv_BumpMap;
+	float3 viewDir;
+};
 
-uniform float4 _MainTex_ST, _BumpMap_ST;
-uniform float _Shininess;
-
-v2f vert (appdata_tan v)
-{
-	v2f o;
-	PositionFog( v.vertex, o.pos, o.fog );
-	o.uvK.xy = TRANSFORM_TEX(v.texcoord,_MainTex);
-	o.uvK.z = _Shininess * 128;
-	o.uv2 = TRANSFORM_TEX(v.texcoord,_BumpMap);
-
-	TANGENT_SPACE_ROTATION;
-	o.lightDirT = mul( rotation, ObjSpaceLightDir( v.vertex ) );	
-	o.viewDirT = mul( rotation, ObjSpaceViewDir( v.vertex ) );	
-
-	TRANSFER_VERTEX_TO_FRAGMENT(o);	
-	return o;
-}
-
-uniform sampler2D _BumpMap;
-uniform sampler2D _MainTex;
-uniform float _Parallax;
-uniform float4 _Color;
-
-float4 frag (v2f i) : COLOR
-{
-	half h = tex2D( _BumpMap, i.uv2 ).w;
-	float2 offset = ParallaxOffset( h, _Parallax, i.viewDirT );
-	i.uvK.xy += offset;
-	i.uv2 += offset;
+void surf (Input IN, inout SurfaceOutput o) {
+	half h = tex2D (_ParallaxMap, IN.uv_BumpMap).w;
+	float2 offset = ParallaxOffset (h, _Parallax, IN.viewDir);
+	IN.uv_MainTex += offset;
+	IN.uv_BumpMap += offset;
 	
-	// get normal from the normal map
-	float3 normal = tex2D(_BumpMap, i.uv2).xyz * 2 - 1;
-		
-	half4 texcol = tex2D(_MainTex,i.uvK.xy);
-	
-	half4 c = SpecularLight( i.lightDirT, i.viewDirT, normal, texcol, i.uvK.z, LIGHT_ATTENUATION(i) );
-	c.a = texcol.a * _Color.a;
-	return c;
+	half4 tex = tex2D(_MainTex, IN.uv_MainTex);
+	o.Albedo = tex.rgb * _Color.rgb;
+	o.Gloss = tex.a;
+	o.Alpha = tex.a * _Color.a;
+	o.Specular = _Shininess;
+	o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));
 }
-ENDCG  
-		}
-	}
+ENDCG
 }
 
-FallBack "Transparent/Bumped Specular", 1
-
+FallBack "Transparent/Bumped Specular"
 }

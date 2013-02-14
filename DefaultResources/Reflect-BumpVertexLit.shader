@@ -6,15 +6,17 @@ Properties {
 	_ReflectColor ("Reflection Color", Color) = (1,1,1,0.5)
 	_MainTex ("Base (RGB) RefStrength (A)", 2D) = "white" {}
 	_Cube ("Reflection Cubemap", Cube) = "" { TexGen CubeReflect }
-	_BumpMap ("Bump (RGB)", 2D) = "bump" {}
+	_BumpMap ("Normalmap", 2D) = "bump" {}
 }
 
 Category {
 	Tags { "RenderType"="Opaque" }
 	LOD 250
-	Blend AppSrcAdd AppDstAdd
 	SubShader {
+		UsePass "Reflective/Bumped Unlit/BASE"
 		Pass {
+			Tags { "LightMode" = "Vertex" }
+			Blend One One ZWrite Off Fog { Color (0,0,0,0) }
 			Material {
 				Diffuse [_Color]
 				Ambient [_Color]
@@ -29,10 +31,8 @@ Category {
 				Combine texture * primary DOUBLE, texture * primary
 			}
 		}
-		UsePass "Reflective/Bumped Unlit/BASE"
 	}
 }
 
-FallBack "Reflective/VertexLit", 1
-
+FallBack "Reflective/VertexLit"
 }

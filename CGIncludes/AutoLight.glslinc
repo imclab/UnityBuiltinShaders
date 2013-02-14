@@ -1,7 +1,7 @@
 // ------------ Shadow helpers --------
 
-// -------- Native shadow maps
-#if defined SHADOWS_NATIVE
+// -------- Depth shadow maps
+#if defined SHADOWS_DEPTH
 
 #define SHADOW_COORDS varying vec4 _ShadowCoord; varying float _ShadowFade;
 uniform mat4 _World2Shadow;
@@ -11,7 +11,7 @@ uniform vec4 _LightShadowData;
 #ifdef FRAGMENT
 uniform sampler2D _ShadowMapTexture;
 
-#if defined SHADOWS_PCF4
+#if defined SHADOWS_SOFT
 uniform vec4 _ShadowOffsets0;
 uniform vec4 _ShadowOffsets1;
 uniform vec4 _ShadowOffsets2;
@@ -20,7 +20,7 @@ uniform vec4 _ShadowOffsets3;
 
 float unitySampleShadow( vec4 shadowCoord, float fade )
 {
-	#if defined SHADOWS_PCF4
+	#if defined SHADOWS_SOFT
 	vec3 coord = shadowCoord.xyz / shadowCoord.w;
 	
 	vec4 shadowVals;
@@ -66,30 +66,6 @@ float unitySampleShadow( vec4 shadowCoord, float fade )
 
 
 
-// -------- Cube shadow maps
-#if defined SHADOWS_CUBE
-
-#define SHADOW_COORDS varying vec3 _ShadowCoord;
-uniform vec4 _LightShadowData;
-#define TRANSFER_SHADOW _ShadowCoord = (_Object2World * gl_Vertex).xyz - _LightPositionRange.xyz;
-
-#ifdef FRAGMENT
-uniform samplerCube _ShadowMapTexture;
-float unityCubeShadow( vec3 vec )
-{
-	float mydist = length(vec) * _LightPositionRange.w;
-	mydist *= 0.97; // bias
-	vec4 packDist = textureCube( _ShadowMapTexture, vec );
-	float dist = DecodeFloatRGBA( packDist );
-	return dist < mydist ? _LightShadowData.r : 1.0;
-}
-#define SHADOW_ATTENUATION unityCubeShadow(_ShadowCoord)
-#endif
-
-#endif
-
-
-
 // -------- Screen space shadow maps
 
 #if defined SHADOWS_SCREEN
@@ -115,12 +91,11 @@ vec3 unityTransferShadow( vec4 hpos )
 #define TRANSFER_SHADOW _ShadowCoord = unityTransferShadow(gl_Position);
 
 #ifdef FRAGMENT
-uniform sampler2DRect _ShadowMapTexture;
+uniform sampler2D _ShadowMapTexture;
 
 float unitySampleShadow( vec3 shadowCoord )
 {
-	//float shadow = texture2DRECTproj( _ShadowMapTexture, shadowCoord ).r;
-	return 1.0;
+	float shadow = texture2Dproj( _ShadowMapTexture, shadowCoord ).r;
 }
 #define SHADOW_ATTENUATION unitySampleShadow(_ShadowCoord)
 #endif
@@ -129,7 +104,7 @@ float unitySampleShadow( vec3 shadowCoord )
 
 
 // -------- Shadows off
-#if !defined SHADOWS_CUBE && !defined SHADOWS_NATIVE && !defined SHADOWS_SCREEN
+#if !defined SHADOWS_CUBE && !defined SHADOWS_DEPTH && !defined SHADOWS_SCREEN
 
 #define SHADOW_COORDS
 #define TRANSFER_SHADOW
@@ -142,22 +117,22 @@ float unitySampleShadow( vec3 shadowCoord )
 
 
 #ifdef POINT
-#define LIGHTING_COORDS varying vec4 _LightCoord; SHADOW_COORDS
-uniform sampler3D _LightTexture0;
+#define LIGHTING_COORDS varying vec4 _LightCoord;
+uniform sampler2D _LightTexture0;
 uniform mat4 _SpotlightProjectionMatrix0;
-#define TRANSFER_VERTEX_TO_FRAGMENT _LightCoord = _SpotlightProjectionMatrix0 * gl_Vertex; TRANSFER_SHADOW
+#define TRANSFER_VERTEX_TO_FRAGMENT _LightCoord = _SpotlightProjectionMatrix0 * gl_Vertex;
 // note: multiplying attenuation the other way around produces bugs on 10.4.8
-#define LIGHT_ATTENUATION	(SHADOW_ATTENUATION * texture3D(_LightTexture0, _LightCoord.xyz).w)
+#define LIGHT_ATTENUATION	(texture2D(_LightTexture0, dot(_LightCoord.xyz,_LightCoord.xyz).rr).w)
 #endif
 
 #ifdef SPOT
-#define LIGHTING_COORDS varying vec4 _LightCoord; SHADOW_COORDS
+#define LIGHTING_COORDS varying vec4 _LightCoord;
 uniform sampler2D _LightTexture0;
 uniform mat4 _SpotlightProjectionMatrix0;
 uniform sampler2D _LightTextureB0;
 uniform mat4 _SpotlightProjectionMatrixB0;
-#define TRANSFER_VERTEX_TO_FRAGMENT _LightCoord.z = (_SpotlightProjectionMatrixB0*gl_Vertex).z; _LightCoord.xyw = (_SpotlightProjectionMatrix0*gl_Vertex).xyw; TRANSFER_SHADOW
-#define LIGHT_ATTENUATION	(SHADOW_ATTENUATION * texture2DProj (_LightTexture0, _LightCoord.xyw).w * texture2D (_LightTextureB0, _LightCoord.zz).w)
+#define TRANSFER_VERTEX_TO_FRAGMENT _LightCoord.z = (_SpotlightProjectionMatrixB0*gl_Vertex).z; _LightCoord.xyw = (_SpotlightProjectionMatrix0*gl_Vertex).xyw;
+#define LIGHT_ATTENUATION	(texture2DProj (_LightTexture0, _LightCoord.xyw).w * texture2D (_LightTextureB0, _LightCoord.zz).w)
 #endif 
 
 #ifdef DIRECTIONAL
@@ -166,18 +141,12 @@ uniform mat4 _SpotlightProjectionMatrixB0;
 #define LIGHT_ATTENUATION	(1.0 * SHADOW_ATTENUATION)
 #endif
 
-#ifdef POINT_NOATT
-#define LIGHTING_COORDS SHADOW_COORDS
-#define TRANSFER_VERTEX_TO_FRAGMENT TRANSFER_SHADOW
-#define LIGHT_ATTENUATION	(1.0 * SHADOW_ATTENUATION)
-#endif
-
 #ifdef POINT_COOKIE
-#define LIGHTING_COORDS varying vec3 _LightCoord; SHADOW_COORDS
+#define LIGHTING_COORDS varying vec3 _LightCoord;
 uniform samplerCube _LightTexture0;
 uniform mat4 _SpotlightProjectionMatrix0;
-#define TRANSFER_VERTEX_TO_FRAGMENT _LightCoord = (_SpotlightProjectionMatrix0*gl_Vertex).xyz; TRANSFER_SHADOW
-#define LIGHT_ATTENUATION	(textureCube(_LightTexture0, _LightCoord).w * SHADOW_ATTENUATION)
+#define TRANSFER_VERTEX_TO_FRAGMENT _LightCoord = (_SpotlightProjectionMatrix0*gl_Vertex).xyz;
+#define LIGHT_ATTENUATION	(textureCube(_LightTexture0, _LightCoord).w)
 #endif
 
 

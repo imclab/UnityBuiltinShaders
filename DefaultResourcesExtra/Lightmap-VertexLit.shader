@@ -1,4 +1,4 @@
-Shader "Lightmapped/VertexLit" {
+Shader "Legacy Shaders/Lightmapped/VertexLit" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Spec Color", Color) = (1,1,1,1)
@@ -13,31 +13,7 @@ Properties {
 SubShader {
 	LOD 100
 	Tags { "RenderType"="Opaque" }
-	Blend AppSrcAdd AppDstAdd
-	Fog { Color [_AddFog] }
 
-	// Ambient pass
-	Pass {
-		Name "BASE"
-		Tags {"LightMode" = "PixelOrNone"}
-		Color [_PPLAmbient]
-		BindChannels {
-			Bind "Vertex", vertex
-			Bind "normal", normal
-			Bind "texcoord1", texcoord0 // lightmap uses 2nd uv
-			Bind "texcoord", texcoord1 // main uses 1st uv
-		}
-		SetTexture [_LightMap] {
-			constantColor [_Color]
-			combine texture * constant
-		}
-		SetTexture [_MainTex] {
-			constantColor [_Color]
-			combine texture * previous, texture * constant
-		}
-	}
-	
-	// Vertex lights
 	Pass {
 		Name "BASE"
 		Tags {"LightMode" = "Vertex"}
@@ -78,14 +54,11 @@ SubShader {
 SubShader {
 	LOD 100
 	Tags { "RenderType"="Opaque" }
-	Blend AppSrcAdd AppDstAdd
-	Fog { Color [_AddFog] }
 
 	// Always drawn base pass: texture * lightmap
 	Pass {
 		Name "BASE"
 		Tags {"LightMode" = "Always"}
-		Color [_PPLAmbient]
 		BindChannels {
 			Bind "Vertex", vertex
 			Bind "normal", normal
@@ -105,6 +78,7 @@ SubShader {
 	Pass {
 		Name "BASE"
 		Tags {"LightMode" = "Vertex"}
+		Blend One One ZWrite Off Fog { Color (0,0,0,0) }
 		Material {
 			Diffuse [_Color]
 			Shininess [_Shininess]
@@ -128,8 +102,6 @@ SubShader {
 SubShader {
 	LOD 100
 	Tags { "RenderType"="Opaque" }
-	Blend AppSrcAdd AppDstAdd
-	Fog { Color [_AddFog] }
 
 	// Base pass: lightmap
 	Pass {
@@ -151,10 +123,10 @@ SubShader {
 			Bind "texcoord", texcoord0 // main uses 1st uv
 		}
 		Blend Zero SrcColor
+		Fog { Color (0,0,0,0) }
 		SetTexture [_MainTex] { combine texture }
 	}
 }
 
-Fallback "VertexLit", 1
-
+Fallback "VertexLit"
 }

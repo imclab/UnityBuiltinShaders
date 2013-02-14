@@ -1,41 +1,53 @@
-Shader "Nature/Soft Occlusion Bark" {
+Shader "Nature/Tree Soft Occlusion Bark" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,0)
-		_MainTex ("Main Texture", 2D) = "white" {  }
-		_BaseLight ("BaseLight", range (0, 1)) = 0.35
-		_AO ("Amb. Occlusion", range (0, 10)) = 2.4
+		_MainTex ("Main Texture", 2D) = "white" {}
+		_BaseLight ("Base Light", Range(0, 1)) = 0.35
+		_AO ("Amb. Occlusion", Range(0, 10)) = 2.4
+		
+		// These are here only to provide default values
 		_Scale ("Scale", Vector) = (1,1,1,1)
+		_SquashAmount ("Squash", Float) = 1
 	}
+	
 	SubShader {
 		Tags {
 			"IgnoreProjector"="True"
-			"BillboardShader" = "Hidden/TerrainEngine/Soft Occlusion Bark rendertex"
 			"RenderType" = "TreeOpaque"
 		}
 
 		Pass {
+			Lighting On
+		
 			CGPROGRAM
 			#pragma vertex bark
+			#pragma fragment frag 
 			#include "SH_Vertex.cginc"
+			
+			sampler2D _MainTex;
+			
+			half4 frag(v2f input) : COLOR
+			{
+				half4 col = input.color;
+				col.rgb *= 2.0f * tex2D( _MainTex, input.uv.xy).rgb;
+				return col;
+			}
 			ENDCG
-						
-			SetTexture [_MainTex] { combine primary * texture DOUBLE, constant }
 		}
 		
-		// Pass to render object as a shadow caster
 		Pass {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
 			
 			Fog {Mode Off}
 			ZWrite On ZTest Less Cull Off
-			Offset [_ShadowBias], [_ShadowBiasSlope]
+			Offset 1, 1
 	
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-			#pragma multi_compile SHADOWS_NATIVE SHADOWS_CUBE
 			#pragma fragmentoption ARB_precision_hint_fastest
+			#pragma multi_compile_shadowcaster
 			#include "UnityCG.cginc"
 			#include "TerrainEngine.cginc"
 			
@@ -62,13 +74,33 @@ Shader "Nature/Soft Occlusion Bark" {
 			ENDCG	
 		}
 	}
+	
 	SubShader {
 		Tags {
 			"IgnoreProjector"="True"
-			"BillboardShader" = "Hidden/TerrainEngine/Soft Occlusion Bark rendertex"
+			"RenderType" = "TreeOpaque"
+		}
+
+		Pass {
+			CGPROGRAM
+			#pragma exclude_renderers gles xbox360 ps3
+			#pragma vertex bark
+			#include "SH_Vertex.cginc"
+			ENDCG
+			
+			Lighting On
+						
+			SetTexture [_MainTex] { combine primary * texture DOUBLE, constant }
+		}
+	}
+	
+	SubShader {
+		Tags {
+			"IgnoreProjector"="True"
 			"RenderType" = "Opaque"
 		}
 		Pass {
+			Tags { "LightMode" = "Vertex" }
 			Lighting On
 			Material {
 				Diffuse [_Color]
@@ -78,5 +110,6 @@ Shader "Nature/Soft Occlusion Bark" {
 		}		
 	}
 	
+	Dependency "BillboardShader" = "Hidden/Nature/Tree Soft Occlusion Bark Rendertex"
 	Fallback Off
 }
