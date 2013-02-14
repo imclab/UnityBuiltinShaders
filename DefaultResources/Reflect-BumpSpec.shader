@@ -1,4 +1,4 @@
-Shader "Reflective/BumpedSpecular" {
+Shader "Reflective/Bumped Specular" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Specular Color", Color) = (0.5,0.5,0.5,1)
@@ -31,7 +31,7 @@ Category {
 			SeparateSpecular on
 			SetTexture [_MainTex] { combine texture alpha * primary DOUBLE, texture * primary }
 		}
-		UsePass " BumpedSpecular/PPL"
+		UsePass "Bumped Specular/PPL"
 	}
 }
 

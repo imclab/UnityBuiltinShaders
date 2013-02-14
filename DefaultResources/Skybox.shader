@@ -14,40 +14,26 @@ SubShader {
 	Cull Off
 	ZWrite On
 	ZTest Always
-	Fog {
-		Mode Off
-	}
+	Fog { Mode Off }
 	Lighting Off		
 	Color [_Tint]
 	Pass {
-		SetTexture [_FrontTex] {
-			combine texture +- primary, texture * primary
-		}
+		SetTexture [_FrontTex] { combine texture +- primary, texture * primary }
 	}
 	Pass {
-		SetTexture [_BackTex] {
-			combine texture +- primary, texture * primary
-		}
+		SetTexture [_BackTex]  { combine texture +- primary, texture * primary }
 	}
 	Pass {
-		SetTexture [_LeftTex] {
-			combine texture +- primary, texture * primary
-		}
+		SetTexture [_LeftTex]  { combine texture +- primary, texture * primary }
 	}
 	Pass {
-		SetTexture [_RightTex] {
-			combine texture +- primary, texture * primary
-		}
+		SetTexture [_RightTex] { combine texture +- primary, texture * primary }
 	}
 	Pass {
-		SetTexture [_UpTex] {
-			combine texture +- primary, texture * primary
-		}
+		SetTexture [_UpTex]    { combine texture +- primary, texture * primary }
 	}
 	Pass {
-		SetTexture [_DownTex] {
-			combine texture +- primary, texture * primary
-		}
+		SetTexture [_DownTex]  { combine texture +- primary, texture * primary }
 	}
 }
 }

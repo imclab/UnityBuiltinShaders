@@ -1,4 +1,4 @@
-Shader "ParallaxBump/ReflectSpecular" {
+Shader "Reflective/Parallax Specular" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Specular Color", Color) = (0.5,0.5,0.5,1)
@@ -28,10 +28,10 @@ Category {
 			SeparateSpecular on
 			SetTexture [_MainTex] { combine texture * primary DOUBLE, texture * primary }
 		}
-		UsePass "ParallaxBump/Specular/PPL"
+		UsePass "Parallax Specular/PPL"
 	}
 }
 
-FallBack "Reflective/BumpedSpecular", 1
+FallBack "Reflective/Bumped Specular", 1
 
 }

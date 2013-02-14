@@ -1,4 +1,4 @@
-Shader "Self-Illumin/Bumped" {
+Shader "Self-Illumin/Bumped Diffuse" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_MainTex ("Base (RGB) Gloss (A)", 2D) = "white" {}
@@ -6,7 +6,7 @@ Shader "Self-Illumin/Bumped" {
 	}
 	SubShader {
 		UsePass "Self-Illumin/VertexLit/BASE"
-		UsePass " Bumped/PPL"
+		UsePass "Bumped Diffuse/PPL"
 	} 
 	FallBack "Self-Illumin/VertexLit", 1
 }

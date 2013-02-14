@@ -7,7 +7,7 @@ Shader "Reflective/Diffuse" {
 	}
 	SubShader {
 		UsePass "Reflective/VertexLit/BASE"
-		UsePass " Diffuse/PPL"
+		UsePass "Diffuse/PPL"
 	} 
 	FallBack "Reflective/VertexLit", 1
 } 

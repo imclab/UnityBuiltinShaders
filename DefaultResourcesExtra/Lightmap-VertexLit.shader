@@ -46,7 +46,7 @@ SubShader {
 		}
 
 		Lighting On
-		SeperateSpecular On
+		SeparateSpecular On
 
 		BindChannels {
 			Bind "Vertex", vertex
@@ -65,8 +65,7 @@ SubShader {
 			combine previous * constant + primary
 		}
 		SetTexture [_MainTex] {
-			constantColor [_Color]
-			combine texture * previous DOUBLE, texture * constant
+			combine texture * previous DOUBLE, texture * primary
 		}
 	}
 }
@@ -94,8 +93,7 @@ SubShader {
 			combine texture * constant
 		}
 		SetTexture [_MainTex] {
-			constantColor [_Color]
-			combine texture * previous, texture * constant
+			combine texture * previous, texture * primary
 		}
 	}
 	
@@ -110,7 +108,7 @@ SubShader {
 		}
 
 		Lighting On
-		SeperateSpecular On
+		SeparateSpecular On
 		
 		ColorMask RGB
 
@@ -120,6 +118,37 @@ SubShader {
 	}
 }
 
-Fallback " VertexLit", 2
+// ------------------------------------------------------------------
+// Single texture cards - lightmap and texture in two passes; no lighting
+
+SubShader {
+	Blend AppSrcAdd AppDstAdd
+	Fog { Color [_AddFog] }
+
+	// Base pass: lightmap
+	Pass {
+		Name "BASE"
+		Tags {"LightMode" = "Always"}
+		BindChannels {
+			Bind "Vertex", vertex
+			Bind "texcoord1", texcoord0 // lightmap uses 2nd uv
+		}
+		SetTexture [_LightMap] { constantColor [_Color] combine texture * constant }
+	}
+	
+	// Second pass: modulate with texture
+	Pass {
+		Name "BASE"
+		Tags {"LightMode" = "Always"}
+		BindChannels {
+			Bind "Vertex", vertex
+			Bind "texcoord", texcoord0 // main uses 1st uv
+		}
+		Blend Zero SrcColor
+		SetTexture [_MainTex] { combine texture }
+	}
+}
+
+Fallback "VertexLit", 1
 
 }

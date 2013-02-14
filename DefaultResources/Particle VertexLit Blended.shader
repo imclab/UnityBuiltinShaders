@@ -14,11 +14,6 @@ SubShader {
 	ColorMask RGB
 	Blend SrcAlpha OneMinusSrcAlpha
 	AlphaTest Greater .001
-	BindChannels {
-		Bind "Color", color
-		Bind "Vertex", vertex
-		Bind "TexCoord", texcoord
-	}
 	Pass { 
 		SetTexture [_MainTex] { combine primary * texture }
 	}

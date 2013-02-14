@@ -1,4 +1,4 @@
-Shader "Self-Illumin/Glossy" {
+Shader "Self-Illumin/Specular" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 1)
@@ -8,7 +8,7 @@ Shader "Self-Illumin/Glossy" {
 	}
 	SubShader {
 		UsePass "Self-Illumin/VertexLit/BASE"
-		UsePass " Glossy/PPL"
+		UsePass "Specular/PPL"
 	}
 	FallBack "Self-Illumin/VertexLit", 1
 }

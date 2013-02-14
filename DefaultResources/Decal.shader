@@ -1,4 +1,4 @@
-Shader " Decal" {
+Shader "Decal" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Spec Color", Color) = (1,1,1,1)
@@ -18,13 +18,13 @@ SubShader {
 	}
 	Pass {
 		Lighting On
-		SeperateSpecular On
+		SeparateSpecular On
 		SetTexture [_MainTex] {combine texture}
 		SetTexture [_DecalTex] {combine texture lerp (texture) previous}
 		SetTexture [_MainTex] {combine previous * primary DOUBLE, previous * constant constantColor [_Color]}
 	}
 }
 
-Fallback " VertexLit", 1
+Fallback "VertexLit", 1
 
 }

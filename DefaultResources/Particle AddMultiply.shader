@@ -20,10 +20,10 @@ Category {
 		Pass {
 			SetTexture [_MainTex] {
 				constantColor [_TintColor]
-				combine constant * texture DOUBLE, constant * primary DOUBLE
+				combine constant * texture, constant * primary DOUBLE
 			}
 			SetTexture [_MainTex] {
-				combine previous * primary, one - texture * previous
+				combine previous * primary DOUBLE, one - texture * previous
 			}
 		}
 	}

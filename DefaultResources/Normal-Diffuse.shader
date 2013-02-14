@@ -1,11 +1,10 @@
-Shader " Diffuse" {
+Shader "Diffuse" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_MainTex ("Base (RGB)", 2D) = "white" {}
 }
 
 Category {
-	Lod 0
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
 	
@@ -34,48 +33,40 @@ Category {
 		// Pixel lights
 		Pass {
 			Name "PPL"
-			Tags {
-				"LightMode" = "Pixel"
-				"LightTexCount" = "012"
-			}
+			Tags { "LightMode" = "Pixel" }
 CGPROGRAM
-// profiles arbfp1
-// fragment frag
-// vertex vert
-// autolight 7
+#pragma vertex vert
+#pragma fragment frag
+#pragma multi_compile_builtin
+#pragma fragmentoption ARB_fog_exp2
+#pragma fragmentoption ARB_precision_hint_fastest
 #include "UnityCG.cginc"
 #include "AutoLight.cginc"
-// fragmentoption ARB_fog_exp2
-// fragmentoption ARB_precision_hint_fastest
 
 struct v2f {
 	V2F_POS_FOG;
-	float2	uv			: TEXCOORD0;
-	float3	normal		: TEXCOORD1;
-	float3	lightDir	: TEXCOORD2;
-	V2F_LIGHT_COORDS(TEXCOORD3);
+	LIGHTING_COORDS
+	float2	uv;
+	float3	normal;
+	float3	lightDir;
 };
-struct v2f2 { 
-	V2F_POS_FOG;
-	float2	uv			: TEXCOORD0;
-	float3	normal		: TEXCOORD1;
-	float3	lightDir	: TEXCOORD2;
-};
+
+uniform float4 _MainTex_ST;
 
 v2f vert (appdata_base v)
 {
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
 	o.normal = v.normal;
-	o.uv = TRANSFORM_UV(0);
-	o.lightDir = ObjSpaceLightDir( v.vertex );	
-	PASS_LIGHT_COORDS(1);
+	o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
+	o.lightDir = ObjSpaceLightDir( v.vertex );
+	TRANSFER_VERTEX_TO_FRAGMENT(o);
 	return o;
 }
 
-uniform sampler2D _MainTex : register(s0);
+uniform sampler2D _MainTex;
 
-float4 frag (v2f2 i, LIGHTDECL(TEXUNIT1))  : COLOR
+float4 frag (v2f i) : COLOR
 {
 	// The eternal tradeoff: do we normalize the normal?
 	//float3 normal = normalize(i.normal);
@@ -83,77 +74,12 @@ float4 frag (v2f2 i, LIGHTDECL(TEXUNIT1))  : COLOR
 		
 	half4 texcol = tex2D( _MainTex, i.uv );
 	
-	return DiffuseLight( i.lightDir, normal, texcol, LIGHTATT );
+	return DiffuseLight( i.lightDir, normal, texcol, LIGHT_ATTENUATION(i) );
 }
 ENDCG
-			SetTexture [_MainTex] {combine texture}
-			SetTexture [_LightTexture0] {combine texture}
-			SetTexture [_LightTextureB0] {combine texture}
 		}
 	}
 	
-	// ------------------------------------------------------------------
-	// GeForce 3/4Ti
-	
-	SubShader {
-		TexCount 4		// Get Geforce2s to ignore this shader
-		Pass {					// Ambient only
-			Tags {"LightMode" = "None"}
-			Color [_PPLAmbient]
-			SetTexture [_MainTex] {constantColor [_Color] Combine texture * primary DOUBLE, texture *  constant}
-		}
-		Pass { 
-			Tags {"LightMode" = "Vertex"} 
-			Material {
-				Diffuse [_Color]
-				Emission [_PPLAmbient]
-			} 
-			Lighting On
-			SetTexture [_MainTex] {constantColor [_PPLAmbent] Combine texture * primary DOUBLE, texture *  primary}
-		}
-		Pass {	
-			// Sum all light contribs from 2-tex lights
-			Name "PPL"
-			Tags { 
-				"LightMode" = "Pixel" 
-			}
-			Material { Diffuse [_Color] }
-			Lighting On
-
-CGPROGRAM
-// autolight 7
-// profiles fp20
-// fragment frag
-// fragmentoption ARB_fog_exp2
-// fragmentoption ARB_precision_hint_fastest
-
-#include "UnityCG.cginc"
-#include "AutoLight.cginc"
-
-struct v2f { 
-	float4 pos    : POSITION;
-	float4 uv: TEXCOORD0;
-};  
-
-uniform sampler2D _MainTex;
-uniform float4 _SpecColor;
-
-half4 frag(v2f i, LIGHTDECL (TEXUNIT1)) : COLOR
-{
-	half4 temp = {1,1,0,0};
-	temp = tex2D (_MainTex, i.uv.xy);
-	temp.xyz *= LIGHTCOLOR + _PPLAmbient.xyz; 
- 	temp.xyz *= 2;
-	temp.w *= _PPLAmbient.w;
-	return temp;
-} 
-ENDCG
-			SetTexture [_MainTex] {combine texture}
-			SetTexture [_LightTexture0] {combine texture} 
-			SetTexture [_LightTextureB0] {combine texture}
-		}
-	}
-
  	// ------------------------------------------------------------------
 	// Radeon 9000
 
@@ -186,7 +112,7 @@ ENDCG
 			}
 
 CGPROGRAM
-// vertex vert
+#pragma vertex vert
 #include "UnityCG.cginc"
 
 struct v2f {
@@ -196,12 +122,14 @@ struct v2f {
 	float3 lightDir	: TEXCOORD2;
 };
 
+uniform float4 _MainTex_ST;
+
 v2f vert(appdata_base v)
 {
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
 	o.normal = v.normal;
-	o.uv = TRANSFORM_UV(0);
+	o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
 	o.lightDir = ObjSpaceLightDir( v.vertex );
 	return o; 
 }
@@ -244,8 +172,11 @@ EndPass;
 			}
 
 CGPROGRAM
-// vertex vert
+#pragma vertex vert
 #include "UnityCG.cginc"
+
+uniform float4 _MainTex_ST;
+uniform float4x4 _SpotlightProjectionMatrix0;
 
 struct v2f {
 	V2F_POS_FOG;
@@ -260,10 +191,10 @@ v2f vert(appdata_tan v)
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
 	o.normal = v.normal;
-	o.uv = TRANSFORM_UV(0);
+	o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
 	o.lightDir = ObjSpaceLightDir( v.vertex );
 	
-	o.LightCoord0 = LIGHT_COORD(2);
+	o.LightCoord0 = mul(_SpotlightProjectionMatrix0, v.vertex);
 	
 	return o; 
 }
@@ -308,8 +239,12 @@ EndPass;
 				"LightTexCount" = "2"
 			}
 CGPROGRAM
-// vertex vert
+#pragma vertex vert
 #include "UnityCG.cginc"
+
+uniform float4 _MainTex_ST;
+uniform float4x4 _SpotlightProjectionMatrix0;
+uniform float4x4 _SpotlightProjectionMatrixB0;
 
 struct v2f {
 	V2F_POS_FOG;
@@ -325,11 +260,11 @@ v2f vert(appdata_tan v)
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
 	o.normal = v.normal;
-	o.uv = TRANSFORM_UV(0);
+	o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
 	o.lightDir = ObjSpaceLightDir( v.vertex );
 	
-	o.LightCoord0 = LIGHT_COORD(2);
-	o.LightCoordB0 = LIGHT_COORD(3);
+	o.LightCoord0 = mul(_SpotlightProjectionMatrix0, v.vertex);
+	o.LightCoordB0 = mul(_SpotlightProjectionMatrixB0, v.vertex);
 	
 	return o; 
 }
@@ -386,8 +321,6 @@ EndPass;
 				Tags {"LightMode" = "PixelOrNone"}
 				Color [_PPLAmbient]
 				Lighting Off
-				SetTexture [_MainTex] {Combine texture * primary DOUBLE}
-				SetTexture [_MainTex] {Combine texture * primary DOUBLE}
 				SetTexture [_MainTex] {Combine texture * primary DOUBLE, primary * texture}
 			}
 			// Vertex lights
@@ -409,12 +342,9 @@ EndPass;
 					"LightTexCount"  = "2"
 				}
 				ColorMask RGB
-				SetTexture [_LightTexture0] 	{ combine previous * texture alpha, previous }
-				SetTexture [_LightTextureB0]	{ 
-					combine previous * texture alpha + constant, previous
-					constantColor [_PPLAmbient]
-				}
-				SetTexture [_MainTex] {combine previous * texture DOUBLE}
+				SetTexture [_LightTexture0]  { combine previous * texture alpha, previous }
+				SetTexture [_LightTextureB0] { combine previous * texture alpha, previous }
+				SetTexture [_MainTex] { combine previous * texture DOUBLE }
 			}
 			// Pixel lights with 1 light texture
 			Pass {
@@ -424,10 +354,7 @@ EndPass;
 					"LightTexCount"  = "1"
 				}
 				ColorMask RGB
-				SetTexture [_LightTexture0] {
-					combine previous * texture alpha + constant, previous
-					constantColor [_PPLAmbient]
-				}
+				SetTexture [_LightTexture0] { combine previous * texture alpha, previous }
 				SetTexture [_MainTex] { combine previous * texture DOUBLE }
 			}
 			// Pixel lights with 0 light textures
@@ -444,6 +371,6 @@ EndPass;
 	}
 }
 
-Fallback " VertexLit", 2
+Fallback "VertexLit", 2
 
 }

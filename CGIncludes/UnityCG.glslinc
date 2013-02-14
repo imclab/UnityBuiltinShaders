@@ -1,0 +1,153 @@
+#ifndef UNITY_CG_INCLUDED
+#define UNITY_CG_INCLUDED
+
+// -------------------------------------------------------------------
+//  builtin values exposed from Unity
+
+// Time values from Unity
+uniform vec4 _Time;
+uniform vec4 _SinTime;
+uniform vec4 _CosTime;
+
+uniform vec4 _ProjectionParams; // x = 1 or -1 (-1 if projection is flipped)
+
+uniform vec4 _PPLAmbient;
+
+uniform vec3 _ObjectSpaceCameraPos;
+uniform vec4 _ObjectSpaceLightPos0;
+uniform vec4 _ModelLightColor0;
+uniform vec4 _SpecularLightColor0;
+
+uniform mat4 _Light2World0, _World2Light0, _Object2World, _World2Object, _Object2Light0;
+
+uniform vec4 _LightDirectionBias; // xyz = direction, w = bias
+uniform vec4 _LightPositionRange; // xyz = pos, w = 1/range
+
+
+#if defined DIRECTIONAL || defined DIRECTIONAL_COOKIE
+#define USING_DIRECTIONAL_LIGHT
+#endif
+
+#if defined DIRECTIONAL || defined DIRECTIONAL_COOKIE || defined POINT || defined SPOT || defined POINT_NOATT || defined POINT_COOKIE
+#define USING_LIGHT_MULTI_COMPILE
+#endif
+
+
+#ifdef VERTEX
+
+// Computes final clip space position and fog parameter
+void PositionFog(vec3 vertex)
+{
+	gl_Position = gl_ModelViewProjectionMatrix * vec4(vertex, 1.0);
+	gl_FogFragCoord = vertex.z;
+}
+
+// Computes object space light direction
+vec3 ObjSpaceLightDir(vec4 vertex)
+{
+	#ifndef USING_LIGHT_MULTI_COMPILE
+		return _ObjectSpaceLightPos0.xyz - vertex.xyz * _ObjectSpaceLightPos0.w;
+	#else
+		#ifndef USING_DIRECTIONAL_LIGHT
+		return _ObjectSpaceLightPos0.xyz - vertex.xyz;
+		#else
+		return _ObjectSpaceLightPos0.xyz;
+		#endif
+	#endif
+}
+
+// Computes object space view direction
+vec3 ObjSpaceViewDir(vec4 vertex)
+{
+	return _ObjectSpaceCameraPos - vertex.xyz;
+}
+
+
+// Declares 3x3 matrix 'rotation', filled with tangent space basis
+#define TANGENT_SPACE_ROTATION \
+	vec3 binormal = cross( gl_Normal.xyz, Tangent.xyz ) * Tangent.w; \
+	mat3 rotation = mat3( \
+			Tangent.x, binormal.x, gl_Normal.x, \
+			Tangent.y, binormal.y, gl_Normal.y, \
+			Tangent.z, binormal.z, gl_Normal.z );
+
+
+// Transforms float2 UV by scale/bias property (new method)
+#define TRANSFORM_TEX(tex,name) (tex.xy * name##_ST.xy + name##_ST.zw)
+// Transforms float4 UV by a texture matrix (old method)
+#define TRANSFORM_UV(idx) (gl_TextureMatrix[idx] * gl_TexCoord[0] ).xy
+
+#endif
+
+// Calculates Lambertian (diffuse) ligting model
+vec4 DiffuseLight( vec3 lightDir, vec3 normal, vec4 color, float atten )
+{
+	#ifndef USING_DIRECTIONAL_LIGHT
+	lightDir = normalize(lightDir);
+	#endif
+	
+	float diffuse = dot( normal, lightDir );
+	
+	vec4 c;
+	c.rgb = color.rgb * _ModelLightColor0.rgb * (diffuse * atten * 2.0);
+	c.a = 0.0; // diffuse passes by default don't contribute to overbright
+	return c;
+}
+
+
+// Calculates Blinn-Phong (specular) lighting model
+vec4 SpecularLight( vec3 lightDir, vec3 viewDir, vec3 normal, vec4 color, float specK, float atten )
+{
+	#ifndef USING_DIRECTIONAL_LIGHT
+	lightDir = normalize(lightDir);
+	#endif
+	viewDir = normalize(viewDir);
+	vec3 h = normalize( lightDir + viewDir );
+	
+	float diffuse = dot( normal, lightDir );
+	
+	float nh = clamp( dot( h, normal ), 0.0, 1.0 );
+	float spec = pow( nh, specK ) * color.a;
+	spec *= diffuse;
+	
+	vec4 c;
+	c.rgb = (color.rgb * _ModelLightColor0.rgb * diffuse + _SpecularLightColor0.rgb * spec) * (atten * 2.0);
+	c.a = _SpecularLightColor0.a * spec * atten; // specular passes by default put highlights to overbright
+	return c;
+}
+
+
+// Calculates UV offset for parallax bump mapping
+vec2 ParallaxOffset( float h, float height, vec3 viewDir )
+{
+	h = h * height - height/2.0;
+	vec3 v = normalize(viewDir);
+	v.z += 0.42;
+	return h * (v.xy / v.z);
+}
+
+
+// Converts color to luminance (grayscale)
+float Luminance( vec3 c )
+{
+	return dot( c, vec3(0.22, 0.707, 0.071) );
+}
+
+
+uniform vec4 _RGBAEncodeDot;	// normally 1.0, 255.0, 65025.0, 160581375.0
+uniform vec4 _RGBAEncodeBias;	// normally +0.5/255.0; on ATI cards -0.55/255.0
+uniform vec4 _RGBADecodeDot;	// normally 1.0, 1/255.0, 1/65025.0, 1/160581375.0
+
+// Encoding/decocing 0..1 floats into 8 bit RGBA
+vec4 EncodeFloatRGBA( float v )
+{
+	return fract(_RGBAEncodeDot * v) + _RGBAEncodeBias;
+}
+
+float DecodeFloatRGBA( vec4 rgba )
+{
+	return dot( rgba, _RGBADecodeDot );
+}
+
+
+#endif

@@ -6,7 +6,7 @@ Shader "Lightmapped/Diffuse" {
 	}
 	SubShader {
 		UsePass "Lightmapped/VertexLit/BASE"
-		UsePass " Diffuse/PPL"
-	} 
-	FallBack " Diffuse", 1
+		UsePass "Diffuse/PPL"
+	}
+	FallBack "Lightmapped/VertexLit", 1
 }

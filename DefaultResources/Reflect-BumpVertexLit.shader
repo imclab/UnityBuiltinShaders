@@ -21,7 +21,7 @@ Category {
 				Emission [_Emission]
 			}
 			Lighting On
-			SeperateSpecular On
+			SeparateSpecular On
 			SetTexture [_MainTex] {
 				constantColor [_Color]
 				Combine texture * primary DOUBLE, texture * primary

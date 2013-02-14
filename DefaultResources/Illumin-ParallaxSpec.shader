@@ -1,4 +1,4 @@
-Shader "ParallaxBump/IlluminSpecular" {
+Shader "Self-Illumin/Parallax Specular" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 1)
@@ -9,7 +9,7 @@ Shader "ParallaxBump/IlluminSpecular" {
 	}
 	SubShader {
 		UsePass "Self-Illumin/VertexLit/BASE"
-		UsePass "ParallaxBump/Specular/PPL"
+		UsePass "Parallax Specular/PPL"
 	}
-	FallBack "Self-Illumin/BumpedSpecular", 1
+	FallBack "Self-Illumin/Bumped Specular", 1
 }

@@ -1,4 +1,4 @@
-Shader "ParallaxBump/ReflectDiffuse" {
+Shader "Reflective/Parallax Diffuse" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_ReflectColor ("Reflection Color", Color) = (1,1,1,0.5)
@@ -23,10 +23,10 @@ Category {
 			Lighting On
 			SetTexture [_MainTex] { combine texture * primary DOUBLE, texture * primary }
 		}
-		UsePass "ParallaxBump/Diffuse/PPL"
+		UsePass "Parallax Diffuse/PPL"
 	}
 }
 
-FallBack "Reflective/Bumped", 1
+FallBack "Reflective/Bumped Diffuse", 1
 
 }

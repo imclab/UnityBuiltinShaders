@@ -1,4 +1,4 @@
-Shader "Reflective/Glossy" {
+Shader "Reflective/Specular" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 1)
@@ -9,7 +9,7 @@ Shader "Reflective/Glossy" {
 	}
 	SubShader {
 		UsePass "Reflective/VertexLit/BASE"
-		UsePass " Glossy/PPL"
+		UsePass "Specular/PPL"
 	}
 	FallBack "Reflective/VertexLit", 1
 }

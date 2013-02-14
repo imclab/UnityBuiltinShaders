@@ -1,4 +1,4 @@
-Shader "Alpha/Bumped" {
+Shader "Transparent/Bumped Diffuse" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_MainTex ("Base (RGB) Trans (A)", 2D) = "white" {}
@@ -16,77 +16,64 @@ Category {
 	// ARB fragment program
 	
 	SubShader {
-		UsePass "Alpha/Diffuse/BASE"
+		UsePass "Transparent/Diffuse/BASE"
 		
 		// Pixel lights
 		Pass {	
 			Name "PPL"
 			Blend SrcAlpha One
-			Tags {
-				"LightMode" = "Pixel"  
-				"LightTexCount" = "012"
-			}
-				
+			Tags { "LightMode" = "Pixel" }
+
 CGPROGRAM
-// profiles arbfp1
-// fragment frag
-// vertex vert
-// autolight 7
-// fragmentoption ARB_fog_exp2
-// fragmentoption ARB_precision_hint_fastest
+#pragma vertex vert
+#pragma fragment frag
+#pragma multi_compile_builtin_noshadows
+#pragma fragmentoption ARB_fog_exp2
+#pragma fragmentoption ARB_precision_hint_fastest
 
 #include "UnityCG.cginc"
 #include "AutoLight.cginc" 
 
-struct v2f { 
+struct v2f {
 	V2F_POS_FOG;
-	float2	uv			: TEXCOORD0;
-	float2	uv2			: TEXCOORD1;
-	float3	lightDirT	: TEXCOORD2;
-	V2F_LIGHT_COORDS(TEXCOORD3);
+	LIGHTING_COORDS
+	float2	uv;
+	float2	uv2;
+	float3	lightDirT;
 }; 
-struct v2f2 { 
-	V2F_POS_FOG;
-	float2	uv			: TEXCOORD0;
-	float2	uv2			: TEXCOORD1;
-	float3	lightDirT	: TEXCOORD2;
-};
 
+uniform float4 _MainTex_ST, _BumpMap_ST;
 
 v2f vert (appdata_tan v)
 {
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
-	o.uv = TRANSFORM_UV(1);
-	o.uv2 = TRANSFORM_UV(0);
+	o.uv = TRANSFORM_TEX(v.texcoord,_MainTex);
+	o.uv2 = TRANSFORM_TEX(v.texcoord,_BumpMap);
 	
 	TANGENT_SPACE_ROTATION;
 	o.lightDirT = mul( rotation, ObjSpaceLightDir( v.vertex ) );	
-	
-	PASS_LIGHT_COORDS(2);
+
+	TRANSFER_VERTEX_TO_FRAGMENT(o);	
 	return o;
 }
 
-uniform sampler2D _BumpMap : register(s0);
-uniform sampler2D _MainTex : register(s1);
+uniform sampler2D _BumpMap;
+uniform sampler2D _MainTex;
 uniform float4 _Color;
 
-float4 frag (v2f2 i, LIGHTDECL(TEXUNIT2))  : COLOR
+float4 frag (v2f i) : COLOR
 {
 	half4 texcol = tex2D(_MainTex,i.uv);
 	
 	// get normal from the normal map
 	half3 normal = tex2D(_BumpMap, i.uv2).xyz * 2 - 1;
 	
-	half4 c = DiffuseLight( i.lightDirT, normal, texcol, LIGHTATT );
+	half4 c = DiffuseLight( i.lightDirT, normal, texcol, LIGHT_ATTENUATION(i) );
 	c.a = texcol.a * _Color.a;
 	return c;
 }
 ENDCG  
-			SetTexture [_BumpMap] {combine texture}
-			SetTexture [_MainTex] {combine texture}
-			SetTexture [_LightTexture0] {combine texture} 
-			SetTexture [_LightTextureB0] {combine texture}
 		}
 	}
 	
@@ -94,7 +81,7 @@ ENDCG
 	// Radeon 9000
 	
 	SubShader {
-		UsePass "Alpha/Diffuse/BASE"
+		UsePass "Transparent/Diffuse/BASE"
 		
 		// Pixel lights with 0 light textures
 		Pass {
@@ -106,8 +93,8 @@ ENDCG
 			}
 
 CGPROGRAM
-// vertex vert
-#include "unityCG.cginc"
+#pragma vertex vert
+#include "UnityCG.cginc"
 
 struct v2f {
 	V2F_POS_FOG;
@@ -116,12 +103,14 @@ struct v2f {
 	float3 lightDirT	: TEXCOORD2;
 };
 
+uniform float4 _MainTex_ST, _BumpMap_ST;
+
 v2f vert(appdata_tan v)
 {
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
-	o.uv = TRANSFORM_UV(0);
-	o.uv2 = TRANSFORM_UV(2);
+	o.uv = TRANSFORM_TEX(v.texcoord,_MainTex);
+	o.uv2 = TRANSFORM_TEX(v.texcoord,_BumpMap);
 	
 	TANGENT_SPACE_ROTATION;
 	o.lightDirT = mul( rotation, ObjSpaceLightDir( v.vertex ) );	
@@ -167,8 +156,11 @@ EndPass;
 			}
 
 CGPROGRAM
-// vertex vert
-#include "unityCG.cginc"
+#pragma vertex vert
+#include "UnityCG.cginc"
+
+uniform float4 _MainTex_ST, _BumpMap_ST;
+uniform float4x4 _SpotlightProjectionMatrix0;
 
 struct v2f {
 	V2F_POS_FOG;
@@ -182,13 +174,13 @@ v2f vert(appdata_tan v)
 {
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
-	o.uv = TRANSFORM_UV(0);
-	o.uv2 = TRANSFORM_UV(3);
+	o.uv = TRANSFORM_TEX(v.texcoord,_MainTex);
+	o.uv2 = TRANSFORM_TEX(v.texcoord,_BumpMap);
 	
 	TANGENT_SPACE_ROTATION;
 	o.lightDirT = mul( rotation, ObjSpaceLightDir( v.vertex ) );
 	
-	o.LightCoord0 = LIGHT_COORD(1);
+	o.LightCoord0 = mul(_SpotlightProjectionMatrix0, v.vertex);
 	
 	return o;
 }
@@ -234,8 +226,12 @@ EndPass;
 				"LightTexCount" = "2"
 			}
 CGPROGRAM
-// vertex vert
-#include "unityCG.cginc"
+#pragma vertex vert
+#include "UnityCG.cginc"
+
+uniform float4 _MainTex_ST, _BumpMap_ST;
+uniform float4x4 _SpotlightProjectionMatrix0;
+uniform float4x4 _SpotlightProjectionMatrixB0;
 
 struct v2f {
 	V2F_POS_FOG;
@@ -250,14 +246,14 @@ v2f vert(appdata_tan v)
 {
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
-	o.uv = TRANSFORM_UV(0);
-	o.uv2 = TRANSFORM_UV(4);
+	o.uv = TRANSFORM_TEX(v.texcoord,_MainTex);
+	o.uv2 = TRANSFORM_TEX(v.texcoord,_BumpMap);
 	
 	TANGENT_SPACE_ROTATION;
 	o.lightDirT = mul( rotation, ObjSpaceLightDir( v.vertex ) );
 	
-	o.LightCoord0 = LIGHT_COORD(1);
-	o.LightCoordB0 = LIGHT_COORD(3);
+	o.LightCoord0 = mul(_SpotlightProjectionMatrix0, v.vertex);
+	o.LightCoordB0 = mul(_SpotlightProjectionMatrixB0, v.vertex);
 	
 	return o;
 }
@@ -301,6 +297,6 @@ EndPass;
 	}
 }
 
-FallBack "Alpha/Diffuse", 1
+FallBack "Transparent/Diffuse", 1
 
 }

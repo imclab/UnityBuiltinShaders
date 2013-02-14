@@ -1,53 +1,52 @@
 #ifndef UNITY_CG_INCLUDED
 #define UNITY_CG_INCLUDED
 
-// The maximum number of pixel lights we can process in one pass.
-// Most shaders only do one light per pass.
-#define MAXLIGHTS 2
-
 // -------------------------------------------------------------------
 //  builtin values exposed from Unity
 
 // Time values from Unity
-#define _TIMEPROP
 uniform float4 _Time;
 uniform float4 _SinTime;
 uniform float4 _CosTime;
 
-/// The current light 
-uniform float4 _LightColor;
+uniform float4 _ProjectionParams; // x = 1 or -1 (-1 if projection is flipped)
+
 uniform float4 _PPLAmbient;
 
 uniform float3 _ObjectSpaceCameraPos;
-uniform float4 _ObjectSpaceLightPos[MAXLIGHTS];
-uniform float4 _ModelLightColor[MAXLIGHTS];
-uniform float4 _SpecularLightColor[MAXLIGHTS];
-/// 3x3 rotation matrix for specular cubemap
-uniform float3x3 _LightSpecularRotation0;
-uniform float3x3 _LightSpecularRotation1;
+uniform float4 _ObjectSpaceLightPos0;
+uniform float4 _ModelLightColor0;
+uniform float4 _SpecularLightColor0;
 
-uniform float4x4 _Light2World[MAXLIGHTS], _World2Light[MAXLIGHTS], _Object2World, _World2Object, _Object2Light[MAXLIGHTS];
+uniform float4x4 _Light2World0, _World2Light0, _Object2World, _World2Object, _Object2Light0;
 
-
-// Define obsolete functions/values for backwards compatability.
-#include "UnityCGobsolete.cginc"
-
+uniform float4 _LightDirectionBias; // xyz = direction, w = bias
+uniform float4 _LightPositionRange; // xyz = pos, w = 1/range
 
 
 // -------------------------------------------------------------------
 //  helper functions and macros used in many standard shaders
 
+#if defined DIRECTIONAL_COOKIE || defined DIRECTIONAL
+#define USING_DIRECTIONAL_LIGHT
+#endif
+
+#if defined DIRECTIONAL || defined DIRECTIONAL_COOKIE || defined POINT || defined SPOT || defined POINT_NOATT || defined POINT_COOKIE
+#define USING_LIGHT_MULTI_COMPILE
+#endif
+
+
 struct appdata_base {
-    float4 vertex;
-    float3 normal;
-    float4 texcoord;
+    float4 vertex : POSITION;
+    float3 normal : NORMAL;
+    float4 texcoord : TEXCOORD0;
 };
 
 struct appdata_tan {
-    float4 vertex;
-    float4 tangent;
-    float3 normal;
-    float4 texcoord;
+    float4 vertex : POSITION;
+    float4 tangent : TANGENT;
+    float3 normal : NORMAL;
+    float4 texcoord : TEXCOORD0;
 };
 
 // Computes final clip space position and fog parameter
@@ -60,7 +59,15 @@ inline void PositionFog( in float4 v, out float4 pos, out float fog )
 // Computes object space light direction
 inline float3 ObjSpaceLightDir( in float4 v )
 {
-	return _ObjectSpaceLightPos[0].xyz - v.xyz * _ObjectSpaceLightPos[0].w;
+	#ifndef USING_LIGHT_MULTI_COMPILE
+		return _ObjectSpaceLightPos0.xyz - v.xyz * _ObjectSpaceLightPos0.w;
+	#else
+		#ifndef USING_DIRECTIONAL_LIGHT
+		return _ObjectSpaceLightPos0.xyz - v.xyz;
+		#else
+		return _ObjectSpaceLightPos0.xyz;
+		#endif
+	#endif
 }
 
 // Computes object space view direction
@@ -76,29 +83,25 @@ inline float3 ObjSpaceViewDir( in float4 v )
 	float3x3 rotation = float3x3( v.tangent.xyz, binormal, v.normal )
 
 
-// Transforms float4 UV
+// Transforms float2 UV by scale/bias property (new method)
+#define TRANSFORM_TEX(tex,name) (tex.xy * name##_ST.xy + name##_ST.zw)
+// Transforms float4 UV by a texture matrix (old method)
 #define TRANSFORM_UV(idx) mul( glstate.matrix.texture[idx], v.texcoord ).xy
 
-#define LIGHT_COORD(idx) mul( glstate.matrix.texture[idx], v.vertex )
-
 #define V2F_POS_FOG float4 pos : POSITION; float fog : FOGC
-#define V2F_LIGHT_COORDS(idx) float4 _LightCoord[2] : idx
-
-// Passes light texture coordinates to the fragment
-#define PASS_LIGHT_COORDS(idx) \
-	o._LightCoord[0] = LIGHT_COORD( idx ); \
-	o._LightCoord[1] = LIGHT_COORD( idx+1 )
 
 
 // Calculates Lambertian (diffuse) ligting model
 inline half4 DiffuseLight( half3 lightDir, half3 normal, half4 color, half atten )
 {
+	#ifndef USING_DIRECTIONAL_LIGHT
 	lightDir = normalize(lightDir);
+	#endif
 	
 	half diffuse = dot( normal, lightDir );
 	
 	half4 c;
-	c.rgb = color.rgb * _ModelLightColor[0].rgb * (diffuse * atten * 2);
+	c.rgb = color.rgb * _ModelLightColor0.rgb * (diffuse * atten * 2);
 	c.a = 0; // diffuse passes by default don't contribute to overbright
 	return c;
 }
@@ -107,7 +110,9 @@ inline half4 DiffuseLight( half3 lightDir, half3 normal, half4 color, half atten
 // Calculates Blinn-Phong (specular) lighting model
 inline half4 SpecularLight( half3 lightDir, half3 viewDir, half3 normal, half4 color, float specK, half atten )
 {
+	#ifndef USING_DIRECTIONAL_LIGHT
 	lightDir = normalize(lightDir);
+	#endif
 	viewDir = normalize(viewDir);
 	half3 h = normalize( lightDir + viewDir );
 	
@@ -115,11 +120,10 @@ inline half4 SpecularLight( half3 lightDir, half3 viewDir, half3 normal, half4 c
 	
 	float nh = saturate( dot( h, normal ) );
 	float spec = pow( nh, specK ) * color.a;
-	spec *= diffuse;
 	
 	half4 c;
-	c.rgb = (color.rgb * _ModelLightColor[0].rgb * diffuse + _SpecularLightColor[0].rgb * spec) * (atten * 2);
-	c.a = _SpecularLightColor[0].a * spec * atten; // specular passes by default put highlights to overbright
+	c.rgb = (color.rgb * _ModelLightColor0.rgb * diffuse + _SpecularLightColor0.rgb * spec) * (atten * 2);
+	c.a = _SpecularLightColor0.a * spec * atten; // specular passes by default put highlights to overbright
 	return c;
 }
 
@@ -182,6 +186,77 @@ v2f_img vert_img( appdata_img v )
 	return o;
 }
 
+uniform float4 _RGBAEncodeDot;	// normally 1.0, 255.0, 65025.0, 160581375.0
+uniform float4 _RGBAEncodeBias;	// normally +0.5/255.0; on ATI cards -0.55/255.0
+uniform float4 _RGBADecodeDot;	// normally 1.0, 1/255.0, 1/65025.0, 1/160581375.0
 
+
+// Encoding/decocing 0..1 floats into 8 bit RGBA
+inline float4 EncodeFloatRGBA( float v )
+{
+	return frac(_RGBAEncodeDot * v) + _RGBAEncodeBias;
+}
+
+inline float DecodeFloatRGBA( float4 rgba )
+{
+	return dot( rgba, _RGBADecodeDot );
+}
+
+
+// Shadow caster pass helpers
+
+#ifdef SHADOWS_CUBE
+	#define V2F_SHADOW_CASTER float4 pos : POSITION; float3 vec
+	#define TRANSFER_SHADOW_CASTER(o) o.vec = mul( _Object2World, v.vertex ).xyz - _LightPositionRange.xyz; o.pos = mul(glstate.matrix.mvp, v.vertex);
+	#define SHADOW_CASTER_FRAGMENT(i) return EncodeFloatRGBA( length(i.vec) * _LightPositionRange.w );
+#else
+	#ifdef SHADER_API_D3D9
+	#define V2F_SHADOW_CASTER float4 pos : POSITION; float4 hpos
+	#define TRANSFER_SHADOW_CASTER(o) v.vertex.xyz += _LightDirectionBias.xyz * _LightDirectionBias.w; o.pos = mul(glstate.matrix.mvp, v.vertex); o.hpos = o.pos;
+	#define SHADOW_CASTER_FRAGMENT(i) return i.hpos.z / i.hpos.w;
+	#else
+	#define V2F_SHADOW_CASTER float4 pos : POSITION
+	#define TRANSFER_SHADOW_CASTER(o) v.vertex.xyz += _LightDirectionBias.xyz * _LightDirectionBias.w; o.pos = mul(glstate.matrix.mvp, v.vertex);
+	#define SHADOW_CASTER_FRAGMENT(i) return 0;
+	#endif
+#endif
+
+// Shadow collector pass helpers
+#ifdef SHADOW_COLLECTOR_PASS
+
+uniform float4x4 _World2Shadow;
+uniform float4x4 _World2Shadow1;
+uniform float4x4 _World2Shadow2;
+uniform float4x4 _World2Shadow3;
+uniform float4 _LightShadowData;
+
+#define V2F_SHADOW_COLLECTOR float4 pos : POSITION; float4 _ShadowCoord[4]; float2 _ShadowZFade
+#define TRANSFER_SHADOW_COLLECTOR(o)	\
+	o.pos = mul(glstate.matrix.mvp, v.vertex); \
+	float z = -mul( glstate.matrix.modelview[0], v.vertex ).z; \
+	o._ShadowZFade.x = z; \
+	o._ShadowZFade.y = z * _LightShadowData.z + _LightShadowData.w; \
+	float4 wpos = mul(_Object2World, v.vertex); \
+	o._ShadowCoord[0] = mul(_World2Shadow ,wpos); \
+	o._ShadowCoord[1] = mul(_World2Shadow1,wpos); \
+	o._ShadowCoord[2] = mul(_World2Shadow2,wpos); \
+	o._ShadowCoord[3] = mul(_World2Shadow3,wpos);
+
+uniform float4 _LightSplitsNear;
+uniform float4 _LightSplitsFar;
+sampler2D _ShadowMapTexture;
+
+#define SHADOW_COLLECTOR_FRAGMENT(i) \
+	float4 z = i._ShadowZFade.x; \
+	float4 near = float4( z >= _LightSplitsNear ); \
+	float4 far = float4( z < _LightSplitsFar ); \
+	float4 weights = near * far; \
+	float4 coord = i._ShadowCoord[0] * weights[0] + i._ShadowCoord[1] * weights[1] + i._ShadowCoord[2] * weights[2] + i._ShadowCoord[3] * weights[3]; \
+	float shadow = tex2Dproj( _ShadowMapTexture, coord.xyw ).r < (coord.z / coord.w) ? _LightShadowData.r : 1.0; \
+	half faded = saturate(shadow + saturate(i._ShadowZFade.y)); \
+	half distance = saturate(1.0 - z * _LightShadowData.g); \
+	return half4(faded,1.0,distance,frac(distance*255.0));
+	
+#endif
 
 #endif

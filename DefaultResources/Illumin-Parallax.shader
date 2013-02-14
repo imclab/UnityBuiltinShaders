@@ -1,4 +1,4 @@
-Shader "ParallaxBump/IlluminDiffuse" {
+Shader "Self-Illumin/Parallax Diffuse" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_Parallax ("Height", Range (0.005, 0.08)) = 0.02
@@ -7,7 +7,7 @@ Shader "ParallaxBump/IlluminDiffuse" {
 	}
 	SubShader {
 		UsePass "Self-Illumin/VertexLit/BASE"
-		UsePass "ParallaxBump/Diffuse/PPL"
+		UsePass "Parallax Diffuse/PPL"
 	}
-	FallBack "Self-Illumin/Bumped", 1
+	FallBack "Self-Illumin/Bumped Diffuse", 1
 }

@@ -20,11 +20,10 @@ Category {
 			Name "BASE"
 			Tags {"LightMode" = "Always"}
 CGPROGRAM
-// profiles arbfp1
-// fragment frag
-// vertex vert
-// fragmentoption ARB_fog_exp2
-// fragmentoption ARB_precision_hint_fastest
+#pragma vertex vert
+#pragma fragment frag
+#pragma fragmentoption ARB_fog_exp2
+#pragma fragmentoption ARB_precision_hint_fastest
 
 #include "UnityCG.cginc"
 #include "AutoLight.cginc" 
@@ -39,12 +38,14 @@ struct v2f {
 	float3	TtoW2	: TEXCOORD5;
 };
 
+uniform float4 _MainTex_ST, _BumpMap_ST;
+
 v2f vert(appdata_tan v)
 {
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
-	o.uv = TRANSFORM_UV(1);
-	o.uv2 = TRANSFORM_UV(0);
+	o.uv = TRANSFORM_TEX(v.texcoord,_MainTex);
+	o.uv2 = TRANSFORM_TEX(v.texcoord,_BumpMap);
 	
 	o.I = mul( (float3x3)_Object2World, -ObjSpaceViewDir( v.vertex ) );	
 	
@@ -56,9 +57,9 @@ v2f vert(appdata_tan v)
 	return o; 
 }
 
-uniform sampler2D _BumpMap : register(s0);
-uniform sampler2D _MainTex : register(s1);
-uniform samplerCUBE _Cube : register(s2);
+uniform sampler2D _BumpMap;
+uniform sampler2D _MainTex;
+uniform samplerCUBE _Cube;
 uniform float4 _ReflectColor;
 uniform float4 _Color;
 
@@ -84,9 +85,6 @@ float4 frag (v2f i) : COLOR
 	return c + reflcolor;
 }
 ENDCG  
-			SetTexture [_BumpMap] {combine texture}
-			SetTexture [_MainTex] {combine texture}
-			SetTexture [_Cube] {combine texture} 
 		} 
 	}
 	
@@ -99,7 +97,7 @@ ENDCG
 			Name "BASE"
 			Tags {"LightMode" = "Always"}
 CGPROGRAM
-// vertex
+#pragma vertex vert
 #include "UnityCG.cginc"
 
 struct v2f {
@@ -112,13 +110,15 @@ struct v2f {
 	float3	TtoW2	: TEXCOORD5;
 };
 
-v2f main(appdata_tan v)
+uniform float4 _MainTex_ST, _BumpMap_ST;
+
+v2f vert(appdata_tan v)
 {
 	v2f o;
 	
 	PositionFog( v.vertex, o.pos, o.fog );
-	o.uv.xy = TRANSFORM_UV(0);
-	o.uv2.xy = TRANSFORM_UV(4);
+	o.uv.xy = TRANSFORM_TEX(v.texcoord,_MainTex);
+	o.uv2.xy = TRANSFORM_TEX(v.texcoord,_BumpMap);
 	
 	o.I = normalize( mul( (float3x3)_Object2World, -ObjSpaceViewDir( v.vertex ) ) );
 	
@@ -166,12 +166,12 @@ EndPass;
 "
 				}
 			}
-			SetTexture[_MainTex] {combine texture}
-			SetTexture[_MainTex] {combine texture}
-			SetTexture[_SpecFalloff] {combine texture}
-			SetTexture[_CubeNormalize] {combine texture}
-			SetTexture[_BumpMap] {combine texture}
-			SetTexture[_Cube] {combine texture}	
+			SetTexture[_MainTex] {}
+			SetTexture[_MainTex] {}
+			SetTexture[_SpecFalloff] {}
+			SetTexture[_CubeNormalize] {}
+			SetTexture[_BumpMap] {}
+			SetTexture[_Cube] {}
 		}
 	}
 	
@@ -189,12 +189,11 @@ EndPass;
 			SetTexture [_Cube] {
 				constantColor [_ReflectColor]
 				combine texture * constant
-				Matrix [_Reflection]
 			}
 		}
 	}
 }
 	
-FallBack " VertexLit", 1
+FallBack "VertexLit", 1
 
 }

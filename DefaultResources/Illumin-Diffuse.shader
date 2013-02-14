@@ -6,7 +6,7 @@ Shader "Self-Illumin/Diffuse" {
 	}
 	SubShader {
 		UsePass "Self-Illumin/VertexLit/BASE"
-		UsePass " Diffuse/PPL"
+		UsePass "Diffuse/PPL"
 	} 
 	FallBack "Self-Illumin/VertexLit", 1
 }

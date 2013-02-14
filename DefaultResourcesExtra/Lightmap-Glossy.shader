@@ -1,4 +1,4 @@
-Shader "Lightmapped/Glossy" {
+Shader "Lightmapped/Specular" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 1)
@@ -8,7 +8,7 @@ Shader "Lightmapped/Glossy" {
 	}
 	SubShader {
 		UsePass "Lightmapped/VertexLit/BASE"
-		UsePass " Glossy/PPL"
+		UsePass "Specular/PPL"
 	}
 	FallBack "Lightmapped/VertexLit", 1
 }

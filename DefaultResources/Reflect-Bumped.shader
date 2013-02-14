@@ -1,4 +1,4 @@
-Shader "Reflective/Bumped" {
+Shader "Reflective/Bumped Diffuse" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_ReflectColor ("Reflection Color", Color) = (1,1,1,0.5)
@@ -26,7 +26,7 @@ Category {
 			Lighting On
 			SetTexture [_MainTex] { combine texture alpha * primary DOUBLE, texture * primary }
 		}
-		UsePass " Bumped/PPL"
+		UsePass "Bumped Diffuse/PPL"
 	}
 }
 

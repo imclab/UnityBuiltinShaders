@@ -46,12 +46,11 @@ SubShader {
 			combine constant lerp (texture) previous
 		}
 		SetTexture [_MainTex] {
-			constantColor [_Color]
-			Combine texture * previous DOUBLE, texture*constant
+			Combine texture * previous DOUBLE, texture*primary
 		}
 	}
 }
 
-Fallback " VertexLit", 1
+Fallback "VertexLit", 1
 
 }

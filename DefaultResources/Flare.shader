@@ -2,7 +2,6 @@ Shader "FX/Flare" {
 Properties {
 	_MainTex ("Particle Texture", 2D) = "black" {}
 }
-
 SubShader {
 	Tags { "Queue" = "Transparent" }
 	Cull off

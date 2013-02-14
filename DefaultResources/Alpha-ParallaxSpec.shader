@@ -1,4 +1,4 @@
-Shader "ParallaxBump/AlphaSpecular" {
+Shader "Transparent/Parallax Specular" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 0)
@@ -19,66 +19,56 @@ Category {
 	// ARB fragment program
 	
 	SubShader {
-		UsePass "Alpha/Glossy/BASE"
+		UsePass "Transparent/Specular/BASE"
 		// Pixel lights
 		Pass {
 			Name "PPL"
 			Blend SrcAlpha One
-			Tags {
-				"LightMode" = "Pixel"
-				"LightTexCount" = "012"
-			}
+			Tags { "LightMode" = "Pixel" }
 CGPROGRAM
-// profiles arbfp1
-// fragment frag
-// vertex vert
-// autolight 7
-// fragmentoption ARB_fog_exp2
-// fragmentoption ARB_precision_hint_fastest
+#pragma vertex vert
+#pragma fragment frag
+#pragma multi_compile_builtin_noshadows
+#pragma fragmentoption ARB_fog_exp2
+#pragma fragmentoption ARB_precision_hint_fastest
 
 #include "UnityCG.cginc"
 #include "AutoLight.cginc" 
 
 struct v2f {
 	V2F_POS_FOG;
-	float3	uvK 		: TEXCOORD0; // xy = UV, z = specular K
-	float3	viewDirT	: TEXCOORD1;
-	float2	uv2			: TEXCOORD2;
-	float3	lightDirT	: TEXCOORD3;
-	V2F_LIGHT_COORDS(TEXCOORD4);
+	LIGHTING_COORDS
+	float3	uvK; // xy = UV, z = specular K
+	float3	viewDirT;
+	float2	uv2;
+	float3	lightDirT;
 }; 
-struct v2f2 {
-	V2F_POS_FOG;
-	float3	uvK 		: TEXCOORD0; // xy = UV, z = specular K
-	float3	viewDirT	: TEXCOORD1;
-	float2	uv2			: TEXCOORD2;
-	float3	lightDirT	: TEXCOORD3;
-};
 
+uniform float4 _MainTex_ST, _BumpMap_ST;
 uniform float _Shininess;
 
 v2f vert (appdata_tan v)
 {
 	v2f o;
 	PositionFog( v.vertex, o.pos, o.fog );
-	o.uvK.xy = TRANSFORM_UV(1);
+	o.uvK.xy = TRANSFORM_TEX(v.texcoord,_MainTex);
 	o.uvK.z = _Shininess * 128;
-	o.uv2 = TRANSFORM_UV(0);
+	o.uv2 = TRANSFORM_TEX(v.texcoord,_BumpMap);
 
 	TANGENT_SPACE_ROTATION;
 	o.lightDirT = mul( rotation, ObjSpaceLightDir( v.vertex ) );	
 	o.viewDirT = mul( rotation, ObjSpaceViewDir( v.vertex ) );	
-	
-	PASS_LIGHT_COORDS(2);
+
+	TRANSFER_VERTEX_TO_FRAGMENT(o);	
 	return o;
 }
 
-uniform sampler2D _BumpMap : register(s0);
-uniform sampler2D _MainTex : register(s1);
+uniform sampler2D _BumpMap;
+uniform sampler2D _MainTex;
 uniform float _Parallax;
 uniform float4 _Color;
 
-float4 frag (v2f2 i, LIGHTDECL(TEXUNIT2))  : COLOR
+float4 frag (v2f i) : COLOR
 {
 	half h = tex2D( _BumpMap, i.uv2 ).w;
 	float2 offset = ParallaxOffset( h, _Parallax, i.viewDirT );
@@ -90,19 +80,15 @@ float4 frag (v2f2 i, LIGHTDECL(TEXUNIT2))  : COLOR
 		
 	half4 texcol = tex2D(_MainTex,i.uvK.xy);
 	
-	half4 c = SpecularLight( i.lightDirT, i.viewDirT, normal, texcol, i.uvK.z, LIGHTATT );
+	half4 c = SpecularLight( i.lightDirT, i.viewDirT, normal, texcol, i.uvK.z, LIGHT_ATTENUATION(i) );
 	c.a = texcol.a * _Color.a;
 	return c;
 }
 ENDCG  
-			SetTexture [_BumpMap] {combine texture}
-			SetTexture [_MainTex] {combine texture}
-			SetTexture [_LightTexture0] {combine texture}
-			SetTexture [_LightTextureB0] {combine texture}
 		}
 	}
 }
 
-FallBack "Alpha/BumpedSpecular", 1
+FallBack "Transparent/Bumped Specular", 1
 
 }

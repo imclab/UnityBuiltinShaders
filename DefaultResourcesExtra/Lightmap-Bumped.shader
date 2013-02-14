@@ -1,4 +1,4 @@
-Shader "Lightmapped/Bumped" {
+Shader "Lightmapped/Bumped Diffuse" {
 	Properties {
 		_Color ("Main Color", Color) = (1,1,1,1)
 		_MainTex ("Base (RGB)", 2D) = "white" {}
@@ -7,7 +7,7 @@ Shader "Lightmapped/Bumped" {
 	}
 	SubShader {
 		UsePass "Lightmapped/VertexLit/BASE"
-		UsePass " Bumped/PPL"
+		UsePass "Bumped Diffuse/PPL"
 	} 
 	FallBack "Lightmapped/VertexLit", 1
 }
