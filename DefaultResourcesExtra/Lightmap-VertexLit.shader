@@ -11,6 +11,7 @@ Properties {
 // Three texture cards (Radeons, GeForce3/4Ti and up)
 
 SubShader {
+	LOD 100
 	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
@@ -75,6 +76,7 @@ SubShader {
 // Dual texture cards - draw in two passes
 
 SubShader {
+	LOD 100
 	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
@@ -124,6 +126,7 @@ SubShader {
 // Single texture cards - lightmap and texture in two passes; no lighting
 
 SubShader {
+	LOD 100
 	Tags { "RenderType"="Opaque" }
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }

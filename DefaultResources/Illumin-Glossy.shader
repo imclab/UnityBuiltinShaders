@@ -7,6 +7,7 @@ Shader "Self-Illumin/Specular" {
 		_BumpMap ("Illumin (A)", 2D) = "bump" {}
 	}
 	SubShader {
+		LOD 300
 		Tags { "RenderType"="Opaque" }
 		UsePass "Self-Illumin/VertexLit/BASE"
 		UsePass "Specular/PPL"

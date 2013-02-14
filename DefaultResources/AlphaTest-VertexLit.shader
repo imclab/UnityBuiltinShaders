@@ -2,7 +2,7 @@ Shader "Transparent/Cutout/VertexLit" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Spec Color", Color) = (1,1,1,0)
-	_Emission ("Emmisive Color", Color) = (0,0,0,0)
+	_Emission ("Emissive Color", Color) = (0,0,0,0)
 	_Shininess ("Shininess", Range (0.1, 1)) = 0.7
 	_MainTex ("Base (RGB) Trans (A)", 2D) = "white" {}
 	_Cutoff ("Alpha cutoff", Range(0,1)) = 0.5
@@ -10,6 +10,7 @@ Properties {
 
 SubShader {
 	Tags {"IgnoreProjector"="True" "RenderType"="TransparentCutout"}
+	LOD 100
 	Pass {
 		Alphatest Greater [_Cutoff]
 		AlphaToMask True

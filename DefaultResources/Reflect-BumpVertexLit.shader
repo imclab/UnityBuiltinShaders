@@ -11,6 +11,7 @@ Properties {
 
 Category {
 	Tags { "RenderType"="Opaque" }
+	LOD 250
 	Blend AppSrcAdd AppDstAdd
 	SubShader {
 		Pass {

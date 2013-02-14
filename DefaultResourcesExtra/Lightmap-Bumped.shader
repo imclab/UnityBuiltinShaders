@@ -6,6 +6,7 @@ Shader "Lightmapped/Bumped Diffuse" {
 		_LightMap ("Lightmap (RGB)", 2D) = "lightmap" { LightmapMode }
 	}
 	SubShader {
+		LOD 300
 		Tags { "RenderType"="Opaque" }
 		UsePass "Lightmapped/VertexLit/BASE"
 		UsePass "Bumped Diffuse/PPL"

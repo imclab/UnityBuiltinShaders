@@ -11,6 +11,7 @@ Properties {
 
 Category {
 	Tags { "RenderType"="Opaque" }
+	LOD 400
 	Blend AppSrcAdd AppDstAdd
 	Fog { Color [_AddFog] }
 	

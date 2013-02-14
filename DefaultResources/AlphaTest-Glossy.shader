@@ -9,6 +9,7 @@ Properties {
 
 Category {
 	Tags {"IgnoreProjector"="True" "RenderType"="TransparentCutout"}
+	LOD 300
 	Alphatest Greater [_Cutoff]
 	AlphaToMask True
 	ColorMask RGB

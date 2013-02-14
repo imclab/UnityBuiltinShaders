@@ -8,6 +8,7 @@ Shader "Lightmapped/Bumped Specular" {
 		_LightMap ("Lightmap (RGB)", 2D) = "lightmap" { LightmapMode }
 	}
 	SubShader {
+		LOD 400
 		Tags { "RenderType"="Opaque" }
 		UsePass "Lightmapped/VertexLit/BASE"
 		UsePass "Bumped Specular/PPL"

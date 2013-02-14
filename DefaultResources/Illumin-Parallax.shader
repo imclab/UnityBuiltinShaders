@@ -6,6 +6,7 @@ Shader "Self-Illumin/Parallax Diffuse" {
 		_BumpMap ("Bump (RGB) HeightIllum (A)", 2D) = "bump" {}
 	}
 	SubShader {
+		LOD 500
 		Tags { "RenderType"="Opaque" }
 		UsePass "Self-Illumin/VertexLit/BASE"
 		UsePass "Parallax Diffuse/PPL"

@@ -6,6 +6,7 @@ Properties {
 
 Category {
 	Tags {"Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent"}
+	LOD 200
 	Alphatest Greater 0
 	ZWrite Off
 	ColorMask RGB
@@ -324,66 +325,64 @@ EndPass;
 	// ------------------------------------------------------------------
 	// Radeon 7000
 	
-	Category {
+	SubShader {
 		Material {
 			Diffuse [_Color]
 			Emission [_PPLAmbient]
 		}
 		Lighting On
 		Fog { Color [_AddFog] }
-		SubShader {
-			Pass {
-				Blend SrcAlpha OneMinusSrcAlpha
-				Name "BASE"
-				Tags {"LightMode" = "PixelOrNone"}
-				Color [_PPLAmbient]
-				Lighting Off
-				SetTexture [_MainTex] {Combine texture * primary DOUBLE}
-				SetTexture [_MainTex] {Combine texture * primary DOUBLE}
-				SetTexture [_MainTex] {Combine texture * primary DOUBLE, primary * texture}
+		Pass {
+			Blend SrcAlpha OneMinusSrcAlpha
+			Name "BASE"
+			Tags {"LightMode" = "PixelOrNone"}
+			Color [_PPLAmbient]
+			Lighting Off
+			SetTexture [_MainTex] {Combine texture * primary DOUBLE}
+			SetTexture [_MainTex] {Combine texture * primary DOUBLE}
+			SetTexture [_MainTex] {Combine texture * primary DOUBLE, primary * texture}
+		}
+		Pass { 	
+			Blend SrcAlpha OneMinusSrcAlpha
+			Name "BASE"
+			Tags {"LightMode" = "Vertex"}
+			SetTexture [_MainTex] {Combine texture * primary DOUBLE, primary * texture}
+		}
+		Pass {
+			Blend SrcAlpha One
+			Name "PPL"
+			Tags {
+				"LightMode" = "Pixel"
+				"LightTexCount" = "2"
 			}
-			Pass { 	
-				Blend SrcAlpha OneMinusSrcAlpha
-				Name "BASE"
-				Tags {"LightMode" = "Vertex"}
-				SetTexture [_MainTex] {Combine texture * primary DOUBLE, primary * texture}
+			SetTexture [_LightTexture0] 	{ combine previous * texture alpha, previous }
+			SetTexture [_LightTextureB0]	{
+				combine previous * texture alpha + constant, previous
+				constantColor [_PPLAmbient]
 			}
-			Pass {
-				Blend SrcAlpha One
-				Name "PPL"
-				Tags {
-					"LightMode" = "Pixel"
-					"LightTexCount" = "2"
-				}
-				SetTexture [_LightTexture0] 	{ combine previous * texture alpha, previous }
-				SetTexture [_LightTextureB0]	{
-					combine previous * texture alpha + constant, previous
-					constantColor [_PPLAmbient]
-				}
-				SetTexture [_MainTex] 	{ combine previous * texture DOUBLE, primary * texture}
+			SetTexture [_MainTex] 	{ combine previous * texture DOUBLE, primary * texture}
+		}
+		Pass {
+			Blend SrcAlpha One
+			Name "PPL"
+			Tags {
+				"LightMode" = "Pixel"
+				"LightTexCount"  = "1"
 			}
-			Pass {
-				Blend SrcAlpha One
-				Name "PPL"
-				Tags {
-					"LightMode" = "Pixel"
-					"LightTexCount"  = "1"
-				}
-				SetTexture [_LightTexture0] {
-					combine previous * texture alpha + constant, previous
-					constantColor [_PPLAmbient]
-				}
-				SetTexture [_MainTex] 	{ combine previous * texture DOUBLE, primary * texture}
+			SetTexture [_LightTexture0] {
+				combine previous * texture alpha + constant, previous
+				constantColor [_PPLAmbient]
 			}
-			Pass {
-				Blend SrcAlpha One
-				Name "PPL"
-				Tags {
-					"LightMode" = "Pixel"
-					"LightTexCount"  = "0"
-				}
-				SetTexture [_MainTex] 	{ combine previous * texture DOUBLE, primary * texture}
+			SetTexture [_MainTex] 	{ combine previous * texture DOUBLE, primary * texture}
+		}
+		Pass {
+			Blend SrcAlpha One
+			Name "PPL"
+			Tags {
+				"LightMode" = "Pixel"
+				"LightTexCount"  = "0"
 			}
+			SetTexture [_MainTex] 	{ combine previous * texture DOUBLE, primary * texture}
 		}
 	}
 }

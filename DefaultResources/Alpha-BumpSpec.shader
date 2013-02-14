@@ -9,6 +9,7 @@ Properties {
 
 Category {
 	Tags {"Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent"}
+	LOD 400
 	Alphatest Greater 0
 	Fog { Color [_AddFog] }
 	ZWrite Off

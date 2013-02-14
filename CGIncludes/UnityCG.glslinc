@@ -2,6 +2,15 @@
 #define UNITY_CG_INCLUDED
 
 // -------------------------------------------------------------------
+// Common functions
+
+float saturate(float x) 
+{ 
+	return max(0.0, min(1.0, x)); 
+}
+
+
+// -------------------------------------------------------------------
 //  builtin values exposed from Unity
 
 // Time values from Unity
@@ -152,6 +161,4 @@ float DecodeFloatRGBA( vec4 rgba )
 {
 	return dot( rgba, _RGBADecodeDot );
 }
-
-
-#endif
+#endif // VERTEX

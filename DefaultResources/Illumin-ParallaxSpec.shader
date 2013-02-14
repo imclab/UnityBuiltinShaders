@@ -8,6 +8,7 @@ Shader "Self-Illumin/Parallax Specular" {
 		_BumpMap ("Bump (RGB) HeightIllum (A)", 2D) = "bump" {}
 	}
 	SubShader {
+		LOD 600
 		Tags { "RenderType"="Opaque" }
 		UsePass "Self-Illumin/VertexLit/BASE"
 		UsePass "Parallax Specular/PPL"

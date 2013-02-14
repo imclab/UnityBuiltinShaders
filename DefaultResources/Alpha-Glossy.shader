@@ -8,6 +8,7 @@ Properties {
 
 Category {
 	Tags {"Queue"="Transparent" "IgnoreProjector"="True" "RenderType"="Transparent"}
+	LOD 300
 	Alphatest Greater 0
 	ZWrite Off
 	ColorMask RGB
