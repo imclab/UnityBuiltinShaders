@@ -11,7 +11,11 @@
 
 uniform float4 _ShadowOffsets[4];
 
+#if defined(SHADOWS_NATIVE)
+UNITY_DECLARE_SHADOWMAP(_ShadowMapTexture);
+#else
 uniform sampler2D _ShadowMapTexture;
+#endif
 
 #define SHADOW_COORDS(idx1) float4 _ShadowCoord : TEXCOORD##idx1;
 
@@ -20,12 +24,22 @@ uniform sampler2D _ShadowMapTexture;
 
 inline fixed unitySampleShadow (float4 shadowCoord)
 {
+	#if defined(SHADOWS_NATIVE)
+
+	fixed shadow = UNITY_SAMPLE_SHADOW(_ShadowMapTexture, shadowCoord.xyz);
+	shadow = _LightShadowData.r + shadow * (1-_LightShadowData.r);
+	return shadow;
+
+	#else
+
 	float dist = tex2Dproj( _ShadowMapTexture, UNITY_PROJ_COORD(shadowCoord) ).x;
 
 	// tegra is confused if we use _LightShadowData.x directly
 	// with "ambiguous overloaded function reference max(mediump float, float)"
 	half lightShadowDataX = _LightShadowData.x;
 	return max(dist > (shadowCoord.z/shadowCoord.w), lightShadowDataX);
+
+	#endif
 }
 
 #else // !(defined(SHADER_API_GLES) && defined(SHADER_API_MOBILE))
@@ -63,7 +77,7 @@ inline fixed unitySampleShadow (float4 shadowCoord)
 	// 4-tap shadows
 
 	float3 coord = shadowCoord.xyz / shadowCoord.w;
-	#if defined (SHADOWS_NATIVE) && !defined (SHADER_API_OPENGL)
+	#if defined (SHADOWS_NATIVE)
 	half4 shadows;
 	shadows.x = UNITY_SAMPLE_SHADOW(_ShadowMapTexture, coord + _ShadowOffsets[0]);
 	shadows.y = UNITY_SAMPLE_SHADOW(_ShadowMapTexture, coord + _ShadowOffsets[1]);
@@ -86,8 +100,7 @@ inline fixed unitySampleShadow (float4 shadowCoord)
 
 	// 1-tap shadows
 
-	// Native sampling of depth textures is broken on Intel 10.4.8, and does not exist on PPC. So sample manually :(
-	#if defined (SHADOWS_NATIVE) && !defined (SHADER_API_OPENGL)
+	#if defined (SHADOWS_NATIVE)
 	half shadow = UNITY_SAMPLE_SHADOW_PROJ(_ShadowMapTexture, shadowCoord);
 	shadow = _LightShadowData.r + shadow * (1-_LightShadowData.r);
 	#else

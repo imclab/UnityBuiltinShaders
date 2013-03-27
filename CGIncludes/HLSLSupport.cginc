@@ -14,6 +14,10 @@
 #define fixed4x4 half4x4
 #define fixed3x3 half3x3
 #define fixed2x2 half2x2
+#define sampler2D_half sampler2D
+#define sampler2D_float sampler2D
+#define samplerCUBE_half samplerCUBE
+#define samplerCUBE_float samplerCUBE
 #endif
 
 
@@ -26,13 +30,19 @@
 #endif
 
 #if defined(SHADOWS_NATIVE) && (defined(SHADER_API_D3D11) || defined(SHADER_API_D3D11_9X))
-#define UNITY_DECLARE_SHADOWMAP(tex) Texture2D tex; SamplerComparisonState sampler##tex
-#define UNITY_SAMPLE_SHADOW(tex,coord) tex.SampleCmpLevelZero (sampler##tex,(coord).xy,(coord).z)
-#define UNITY_SAMPLE_SHADOW_PROJ(tex,coord) tex.SampleCmpLevelZero (sampler##tex,(coord).xy/(coord).w,(coord).z/(coord).w)
+	// DX11 syntax for shadow maps
+	#define UNITY_DECLARE_SHADOWMAP(tex) Texture2D tex; SamplerComparisonState sampler##tex
+	#define UNITY_SAMPLE_SHADOW(tex,coord) tex.SampleCmpLevelZero (sampler##tex,(coord).xy,(coord).z)
+	#define UNITY_SAMPLE_SHADOW_PROJ(tex,coord) tex.SampleCmpLevelZero (sampler##tex,(coord).xy/(coord).w,(coord).z/(coord).w)
+#elif defined(SHADOWS_NATIVE) && defined(SHADER_TARGET_GLSL) && defined(SHADER_API_GLES)
+	// hlsl2glsl syntax for shadow maps
+	#define UNITY_DECLARE_SHADOWMAP(tex) sampler2DShadow tex
+	#define UNITY_SAMPLE_SHADOW(tex,coord) shadow2D (tex,(coord).xyz)
+	#define UNITY_SAMPLE_SHADOW_PROJ(tex,coord) shadow2Dproj (tex,coord)
 #else
-#define UNITY_DECLARE_SHADOWMAP(tex) sampler2D tex
-#define UNITY_SAMPLE_SHADOW(tex,coord) tex2D (tex,(coord).xyz).r
-#define UNITY_SAMPLE_SHADOW_PROJ(tex,coord) tex2Dproj (tex,UNITY_PROJ_COORD(coord)).r
+	#define UNITY_DECLARE_SHADOWMAP(tex) sampler2D tex
+	#define UNITY_SAMPLE_SHADOW(tex,coord) tex2D (tex,(coord).xyz).r
+	#define UNITY_SAMPLE_SHADOW_PROJ(tex,coord) tex2Dproj (tex,UNITY_PROJ_COORD(coord)).r
 #endif
 
 
