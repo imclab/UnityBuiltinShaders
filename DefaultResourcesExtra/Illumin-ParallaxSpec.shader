@@ -1,4 +1,4 @@
-Shader "Self-Illumin/Parallax Specular" {
+Shader "Legacy Shaders/Self-Illumin/Parallax Specular" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 1)
@@ -9,6 +9,7 @@ Properties {
 	_BumpMap ("Normalmap", 2D) = "bump" {}
 	_ParallaxMap ("Heightmap (A)", 2D) = "black" {}
 	_EmissionLM ("Emission (Lightmapper)", Float) = 0
+	[Toggle] _DynamicEmissionLM ("Dynamic Emission (Lightmapper)", Int) = 0
 }
 SubShader {
 	Tags { "RenderType"="Opaque" }
@@ -51,5 +52,5 @@ void surf (Input IN, inout SurfaceOutput o) {
 }
 ENDCG
 }
-FallBack "Self-Illumin/Bumped Specular"
+FallBack "Legacy Shaders/Self-Illumin/Bumped Specular"
 }

@@ -1,18 +1,14 @@
-Shader "Self-Illumin/Bumped Diffuse" {
+Shader "Legacy Shaders/Self-Illumin/Bumped Diffuse" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_MainTex ("Base (RGB) Gloss (A)", 2D) = "white" {}
 	_Illum ("Illumin (A)", 2D) = "white" {}
 	_BumpMap ("Normalmap", 2D) = "bump" {}
 	_EmissionLM ("Emission (Lightmapper)", Float) = 0
+	[Toggle] _DynamicEmissionLM ("Dynamic Emission (Lightmapper)", Int) = 0
 }
-SubShader {
-	Tags { "RenderType"="Opaque" }
-	LOD 300
 
-CGPROGRAM
-#pragma surface surf Lambert
-
+CGINCLUDE
 sampler2D _MainTex;
 sampler2D _BumpMap;
 sampler2D _Illum;
@@ -33,6 +29,25 @@ void surf (Input IN, inout SurfaceOutput o) {
 	o.Normal = UnpackNormal(tex2D(_BumpMap, IN.uv_BumpMap));
 }
 ENDCG
-} 
-FallBack "Self-Illumin/Diffuse"
+
+SubShader {
+	Tags { "RenderType"="Opaque" }
+	LOD 300
+
+	CGPROGRAM
+	#pragma surface surf Lambert
+	#pragma target 3.0
+	ENDCG
+}
+
+SubShader {
+	Tags { "RenderType"="Opaque" }
+	LOD 300
+
+	CGPROGRAM
+	#pragma surface surf Lambert nodynlightmap
+	ENDCG
+}
+
+FallBack "Legacy Shaders/Self-Illumin/Diffuse"
 }

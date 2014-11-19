@@ -5,12 +5,10 @@ Properties {
 SubShader {
 	Pass {
 		ZTest Always Cull Off ZWrite Off
-		Fog { Mode off }
 		
 CGPROGRAM
 #pragma vertex vert
 #pragma fragment frag
-#pragma exclude_renderers noshadows
 #include "UnityCG.cginc"
 
 v2f_img vert (appdata_img v)
@@ -18,9 +16,6 @@ v2f_img vert (appdata_img v)
 	v2f_img o;
 	o.pos = mul (UNITY_MATRIX_MVP, v.vertex);
 	o.uv = v.texcoord.xy;
-	#if SHADER_API_FLASH
-	o.uv.xy *= unity_NPOTScale.xy;
-	#endif
 	return o;
 }
 
@@ -69,14 +64,10 @@ fixed4 frag (v2f_img i) : SV_Target
 	LOOP_ITERATION (1);
 	LOOP_ITERATION (2);
 	LOOP_ITERATION (3);
-	
-	// In Flash, due to very limited register count we can't do more samples :(
-	#ifndef SHADER_API_FLASH
 	LOOP_ITERATION (4);
 	LOOP_ITERATION (5);
 	LOOP_ITERATION (6);
 	LOOP_ITERATION (7);
-	#endif
 
 	float shadow = mask.x / mask.y;
 	return shadow;

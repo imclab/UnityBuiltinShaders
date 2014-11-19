@@ -45,13 +45,13 @@ Shader "UI/Lit/Detail"
 		Lighting Off
 		ZWrite Off
 		ZTest [unity_GUIZTestMode]
-		Fog { Mode Off }
 		Offset -1, -1
 		Blend SrcAlpha OneMinusSrcAlpha
 		ColorMask [_ColorMask]
 
 		CGPROGRAM
-			#pragma surface surf PPL alpha vertex:vert
+			#pragma surface surf PPL alpha noshadow novertexlights nolightmap vertex:vert nofog
+			#pragma target 3.0
 
 			#include "UnityCG.cginc"
 	

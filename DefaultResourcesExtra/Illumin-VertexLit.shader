@@ -1,4 +1,4 @@
-Shader "Self-Illumin/VertexLit" {
+Shader "Legacy Shaders/Self-Illumin/VertexLit" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Spec Color", Color) = (1,1,1,1)
@@ -6,6 +6,7 @@ Properties {
 	_MainTex ("Base (RGB)", 2D) = "white" {}
 	_Illum ("Illumin (A)", 2D) = "white" {}
 	_EmissionLM ("Emission (Lightmapper)", Float) = 0
+	[Toggle] _DynamicEmissionLM ("Dynamic Emission (Lightmapper)", Int) = 0
 }
 
 SubShader {
@@ -32,5 +33,5 @@ SubShader {
 	}
 }
 
-Fallback "VertexLit"
+Fallback "Legacy Shaders/VertexLit"
 }

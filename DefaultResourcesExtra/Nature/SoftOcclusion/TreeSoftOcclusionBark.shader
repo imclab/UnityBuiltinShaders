@@ -6,14 +6,16 @@ Shader "Nature/Tree Soft Occlusion Bark" {
 		_AO ("Amb. Occlusion", Range(0, 10)) = 2.4
 		
 		// These are here only to provide default values
-		_Scale ("Scale", Vector) = (1,1,1,1)
-		_SquashAmount ("Squash", Float) = 1
+		[HideInInspector] _TreeInstanceColor ("TreeInstanceColor", Vector) = (1,1,1,1)
+		[HideInInspector] _TreeInstanceScale ("TreeInstanceScale", Vector) = (1,1,1,1)
+		[HideInInspector] _SquashAmount ("Squash", Float) = 1
 	}
 	
 	SubShader {
 		Tags {
 			"IgnoreProjector"="True"
 			"RenderType" = "TreeOpaque"
+			"DisableBatching"="True"
 		}
 
 		Pass {
@@ -21,9 +23,9 @@ Shader "Nature/Tree Soft Occlusion Bark" {
 		
 			CGPROGRAM
 			#pragma vertex bark
-			#pragma fragment frag 
-			#pragma glsl_no_auto_normalization
-			#include "SH_Vertex.cginc"
+			#pragma fragment frag
+			#pragma multi_compile_fog
+			#include "UnityBuiltin2xTreeLibrary.cginc"
 			
 			sampler2D _MainTex;
 			
@@ -31,6 +33,7 @@ Shader "Nature/Tree Soft Occlusion Bark" {
 			{
 				fixed4 col = input.color;
 				col.rgb *= 2.0f * tex2D( _MainTex, input.uv.xy).rgb;
+				UNITY_APPLY_FOG(input.fogCoord, col);
 				return col;
 			}
 			ENDCG
@@ -40,14 +43,9 @@ Shader "Nature/Tree Soft Occlusion Bark" {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
 			
-			Fog {Mode Off}
-			ZWrite On ZTest LEqual Cull Off
-			Offset 1, 1
-	
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-			#pragma glsl_no_auto_normalization
 			#pragma multi_compile_shadowcaster
 			#include "UnityCG.cginc"
 			#include "TerrainEngine.cginc"

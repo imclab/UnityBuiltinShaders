@@ -1,4 +1,4 @@
-Shader "Transparent/Specular" {
+Shader "Legacy Shaders/Transparent/Specular" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 0)
@@ -31,5 +31,5 @@ void surf (Input IN, inout SurfaceOutput o) {
 ENDCG
 }
 
-Fallback "Transparent/VertexLit"
+Fallback "Legacy Shaders/Transparent/VertexLit"
 }

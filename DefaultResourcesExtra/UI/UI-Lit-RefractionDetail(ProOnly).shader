@@ -54,7 +54,6 @@ Shader "UI/Lit/Refraction Detail (Pro Only)"
 		Lighting Off
 		ZWrite Off
 		ZTest [unity_GUIZTestMode]
-		Fog { Mode Off }
 		Offset -1, -1
 		Blend SrcAlpha OneMinusSrcAlpha
 		AlphaTest Greater 0
@@ -62,7 +61,7 @@ Shader "UI/Lit/Refraction Detail (Pro Only)"
 
 		CGPROGRAM
 			#pragma target 3.0
-			#pragma surface surf PPL alpha vertex:vert
+			#pragma surface surf PPL alpha noshadow novertexlights nolightmap vertex:vert nofog
 				
 			#include "UnityCG.cginc"
 	
@@ -78,7 +77,6 @@ Shader "UI/Lit/Refraction Detail (Pro Only)"
 	
 			struct Input
 			{
-				float4 vertex : SV_POSITION;
 				float4 texcoord1 : TEXCOORD0;
 				float4 texcoord2 : TEXCOORD1;
 				float2 texcoord3 : TEXCOORD2;
@@ -112,7 +110,7 @@ Shader "UI/Lit/Refraction Detail (Pro Only)"
 
 			void vert (inout appdata_t v, out Input o)
 			{
-				o.vertex		= mul(UNITY_MATRIX_MVP, v.vertex);
+				float4 vertex	= mul(UNITY_MATRIX_MVP, v.vertex);
 				o.texcoord1.xy	= TRANSFORM_TEX(v.texcoord1, _MainTex);
 				o.texcoord1.zw	= TRANSFORM_TEX(v.texcoord1, _MainBump);
 				o.texcoord2.xy	= TRANSFORM_TEX(v.texcoord2 * _DetailTex_TexelSize.xy, _DetailTex);
@@ -121,11 +119,11 @@ Shader "UI/Lit/Refraction Detail (Pro Only)"
 				o.color			= v.color;
 
 			#if UNITY_UV_STARTS_AT_TOP
-				o.proj.xy = (float2(o.vertex.x, -o.vertex.y) + o.vertex.w) * 0.5;
+				o.proj.xy = (float2(vertex.x, -vertex.y) + vertex.w) * 0.5;
 			#else
-				o.proj.xy = (float2(o.vertex.x, o.vertex.y) + o.vertex.w) * 0.5;
+				o.proj.xy = (float2(vertex.x, vertex.y) + vertex.w) * 0.5;
 			#endif
-				o.proj.zw = o.vertex.zw;
+				o.proj.zw = vertex.zw;
 			}
 
 			void surf (Input IN, inout SurfaceOutput o)

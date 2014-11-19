@@ -10,8 +10,9 @@ Properties {
 	_ShadowTex ("Shadow (RGB)", 2D) = "white" {}
 
 	// These are here only to provide default values
-	_Scale ("Scale", Vector) = (1,1,1,1)
-	_SquashAmount ("Squash", Float) = 1
+	[HideInInspector] _TreeInstanceColor ("TreeInstanceColor", Vector) = (1,1,1,1)
+	[HideInInspector] _TreeInstanceScale ("TreeInstanceScale", Vector) = (1,1,1,1)
+	[HideInInspector] _SquashAmount ("Squash", Float) = 1
 }
 
 SubShader { 
@@ -26,12 +27,13 @@ SubShader {
 		Name "ForwardBase"
 
 	CGPROGRAM
-		#include "TreeVertexLit.cginc"
+		fixed4 _LightColor0;
+		#include "UnityBuiltin3xTreeLibrary.cginc"
 
 		#pragma vertex VertexLeaf
 		#pragma fragment FragmentLeaf
-		#pragma exclude_renderers flash
 		#pragma multi_compile_fwdbase nolightmap
+		#pragma multi_compile_fog
 		
 		sampler2D _MainTex;
 		float4 _MainTex_ST;
@@ -49,6 +51,7 @@ SubShader {
 		#if defined(SHADOWS_SCREEN)
 			float4 screenPos : TEXCOORD1;
 		#endif
+			UNITY_FOG_COORDS(2)
 		};
 
 		v2f_leaf VertexLeaf (appdata_full v)
@@ -60,9 +63,9 @@ SubShader {
 			fixed ao = v.color.a;
 			ao += 0.1; ao = saturate(ao * ao * ao); // emphasize AO
 
-			fixed3 color = v.color.rgb * _Color.rgb * ao;
+			fixed3 color = v.color.rgb * ao;
 			
-			float3 worldN = mul ((float3x3)_Object2World, SCALED_NORMAL);
+			float3 worldN = UnityObjectToWorldNorm(v.normal);
 
 			fixed4 mainLight;
 			mainLight.rgb = ShadeTranslucentMainLight (v.vertex, worldN) * color;
@@ -77,6 +80,7 @@ SubShader {
 			o.diffuse += mainLight;
 		#endif			
 			o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
+			UNITY_TRANSFER_FOG(o,o.pos);
 			return o;
 		}
 
@@ -96,7 +100,9 @@ SubShader {
 			light.rgb *= 2.0;
 		#endif
 
-			return fixed4 (albedo.rgb * light, 0.0);
+			fixed4 col = fixed4 (albedo.rgb * light, 0.0);
+			UNITY_APPLY_FOG(IN.fogCoord, col);
+			return col;
 		}
 
 	ENDCG
@@ -107,14 +113,11 @@ SubShader {
 		Name "ShadowCaster"
 		Tags { "LightMode" = "ShadowCaster" }
 		
-		Fog {Mode Off}
 		ZWrite On ZTest LEqual
-		Offset 1, 1
 
 	CGPROGRAM
 		#pragma vertex vert_surf
 		#pragma fragment frag_surf
-		#pragma exclude_renderers noshadows
 		#pragma multi_compile_shadowcaster
 		#include "HLSLSupport.cginc"
 		#include "UnityCG.cginc"
@@ -123,7 +126,7 @@ SubShader {
 		#define INTERNAL_DATA
 		#define WorldReflectionVector(data,normal) data.worldRefl
 
-		#include "Tree.cginc"
+		#include "UnityBuiltin3xTreeLibrary.cginc"
 
 		sampler2D _ShadowTex;
 
@@ -154,97 +157,7 @@ SubShader {
 
 	}
 
-	// Pass to render object as a shadow collector
-	Pass {
-		Name "ShadowCollector"
-		Tags { "LightMode" = "ShadowCollector" }
-		
-		Fog {Mode Off}
-		ZWrite On ZTest LEqual
-
-	CGPROGRAM
-		#pragma vertex vert
-		#pragma fragment frag
-		#pragma exclude_renderers noshadows
-		#pragma multi_compile_shadowcollector
-
-		#define SHADOW_COLLECTOR_PASS
-		#include "UnityCG.cginc"
-		#include "TerrainEngine.cginc"
-
-		struct v2f {
-			V2F_SHADOW_COLLECTOR;
-			float2  uv : TEXCOORD5;
-		};
-
-		uniform float4 _MainTex_ST;
-
-		v2f vert (appdata_full v)
-		{
-			v2f o;
-			TreeVertLeaf(v);
-			TRANSFER_SHADOW_COLLECTOR(o)
-			o.uv = TRANSFORM_TEX(v.texcoord, _MainTex);
-			return o;
-		}
-
-		uniform sampler2D _MainTex;
-		uniform fixed _Cutoff;
-
-		half4 frag (v2f i) : SV_Target
-		{
-			fixed4 texcol = tex2D( _MainTex, i.uv );
-			clip( texcol.a - _Cutoff );
-			
-			SHADOW_COLLECTOR_FRAGMENT(i)
-		}
-	ENDCG
-
-	}
-	
 }
 
-SubShader {
-	Tags {
-		"IgnoreProjector"="True"
-		"RenderType"="TreeLeaf"
-	}
-	
-	Lighting On
-	
-	Pass {
-		CGPROGRAM
-		#pragma exclude_renderers shaderonly
-		#pragma vertex TreeVertLit
-		#include "UnityCG.cginc"
-		#include "TreeVertexLit.cginc"
-		#include "TerrainEngine.cginc"
-		struct v2f {
-			float4 pos : SV_POSITION;
-			fixed4 color : COLOR;
-			float4 uv : TEXCOORD0;
-		};
-		v2f TreeVertLit (appdata_full v) {
-			v2f o;
-			TreeVertLeaf(v);
-
-			o.color.rgb = ShadeVertexLights (v.vertex, v.normal);
-				
-			o.pos = mul (UNITY_MATRIX_MVP, v.vertex);	
-			o.uv = v.texcoord;
-			o.color.a = 1.0f;
-			return o;
-		}
-		ENDCG
-
-		AlphaTest Greater [_Cutoff]
-		ColorMask RGB
-		SetTexture [_MainTex] { combine texture * primary DOUBLE, texture }
-		SetTexture [_MainTex] {
-			ConstantColor [_Color]
-			Combine previous * constant, previous
-		} 
-	}
-}
 Dependency "BillboardShader" = "Hidden/Nature/Tree Creator Leaves Rendertex"
 }

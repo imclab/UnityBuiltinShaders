@@ -18,7 +18,7 @@ SubShader {
 	LOD 250
 	
 CGPROGRAM
-#pragma surface surf MobileBlinnPhong exclude_path:prepass nolightmap noforwardadd halfasview
+#pragma surface surf MobileBlinnPhong exclude_path:prepass nolightmap noforwardadd halfasview interpolateview
 
 inline fixed4 LightingMobileBlinnPhong (SurfaceOutput s, fixed3 lightDir, fixed3 halfDir, fixed atten)
 {

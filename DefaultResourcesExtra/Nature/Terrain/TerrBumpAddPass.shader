@@ -25,6 +25,8 @@ SubShader {
 CGPROGRAM
 #pragma surface surf BlinnPhong vertex:vert decal:add
 #pragma target 3.0
+// needs more than 8 texcoords
+#pragma exclude_renderers gles
 
 void vert (inout appdata_full v)
 {

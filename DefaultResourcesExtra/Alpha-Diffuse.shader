@@ -1,4 +1,4 @@
-Shader "Transparent/Diffuse" {
+Shader "Legacy Shaders/Transparent/Diffuse" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_MainTex ("Base (RGB) Trans (A)", 2D) = "white" {}
@@ -26,5 +26,5 @@ void surf (Input IN, inout SurfaceOutput o) {
 ENDCG
 }
 
-Fallback "Transparent/VertexLit"
+Fallback "Legacy Shaders/Transparent/VertexLit"
 }

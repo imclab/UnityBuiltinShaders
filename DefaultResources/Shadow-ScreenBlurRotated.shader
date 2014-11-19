@@ -5,12 +5,10 @@ Properties {
 SubShader {
 	Pass {
 		ZTest Always Cull Off ZWrite Off
-		Fog { Mode off }
 		
 CGPROGRAM
 #pragma vertex vert_img
 #pragma fragment frag
-#pragma exclude_renderers noshadows
 #pragma target 3.0
 #include "UnityCG.cginc"
 

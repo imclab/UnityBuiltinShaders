@@ -20,20 +20,15 @@ CGPROGRAM
 #pragma vertex vert_surf
 #pragma fragment frag_surf
 #pragma multi_compile_fwdbase
+#pragma multi_compile_fog
 #include "HLSLSupport.cginc"
-#define UNITY_PASS_FORWARDBASE
 #include "UnityCG.cginc"
 #include "Lighting.cginc"
 #include "AutoLight.cginc"
 
-#define INTERNAL_DATA
-#define WorldReflectionVector(data,normal) data.worldRefl
-#define WorldNormalVector(data,normal) normal
-
 		inline float3 LightingLambertVS (float3 normal, float3 lightDir)
 		{
-			fixed diff = max (0, dot (normal, lightDir));
-			
+			fixed diff = max (0, dot (normal, lightDir));			
 			return _LightColor0.rgb * (diff * 2);
 		}
 
@@ -61,20 +56,22 @@ CGPROGRAM
   fixed3 vlight : TEXCOORD2;
   #endif
   LIGHTING_COORDS(3,4)
+  UNITY_FOG_COORDS(5)
 };
 #ifndef LIGHTMAP_OFF
 float4 unity_LightmapST;
 float4 unity_LightmapFade;
 #endif
 float4 _MainTex_ST;
-v2f_surf vert_surf (appdata_full v) {
+v2f_surf vert_surf (appdata_full v)
+{
 	v2f_surf o;
 	o.pos = mul (UNITY_MATRIX_MVP, v.vertex);
 	o.pack0.xy = TRANSFORM_TEX(v.texcoord, _MainTex);
 	#ifndef LIGHTMAP_OFF
 	o.lmap.xy = v.texcoord1.xy * unity_LightmapST.xy + unity_LightmapST.zw;
 	#endif
-	float3 worldN = mul((float3x3)_Object2World, SCALED_NORMAL);
+	float3 worldN = UnityObjectToWorldNorm(v.normal);
 	#ifdef LIGHTMAP_OFF
 	o.normal = worldN;
 	#endif
@@ -85,12 +82,14 @@ v2f_surf vert_surf (appdata_full v) {
 	
 	#endif // LIGHTMAP_OFF
 	TRANSFER_VERTEX_TO_FRAGMENT(o);
+	UNITY_TRANSFER_FOG(o,o.pos);
 	return o;
 }
 #ifndef LIGHTMAP_OFF
 sampler2D unity_Lightmap;
 #endif
-fixed4 frag_surf (v2f_surf IN) : SV_Target {
+fixed4 frag_surf (v2f_surf IN) : SV_Target
+{
 	Input surfIN;
 	surfIN.uv_MainTex = IN.pack0.xy;
 	SurfaceOutput o;
@@ -119,6 +118,7 @@ fixed4 frag_surf (v2f_surf IN) : SV_Target {
 	#endif
 	c.a = o.Alpha;
 	#endif // !LIGHTMAP_OFF
+	UNITY_APPLY_FOG(IN.fogCoord, c);
 	return c;
 }
 

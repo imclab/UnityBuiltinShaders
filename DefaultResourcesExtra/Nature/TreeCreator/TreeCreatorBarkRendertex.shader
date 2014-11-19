@@ -6,12 +6,9 @@ Properties {
 	
 	// These are here only to provide default values
 	_SpecColor ("Specular Color", Color) = (0.5, 0.5, 0.5, 1)
-	_Scale ("Scale", Vector) = (1,1,1,1)
-	_SquashAmount ("Squash", Float) = 1
 }
 
 SubShader {  
-	Fog { Mode Off }	
 	Pass {
 CGPROGRAM
 #pragma vertex vert

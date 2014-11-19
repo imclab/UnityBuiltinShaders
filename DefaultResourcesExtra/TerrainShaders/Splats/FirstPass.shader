@@ -18,14 +18,15 @@ SubShader {
 	}
 CGPROGRAM
 #pragma surface surf Lambert
-struct Input {
-	float2 uv_Control : TEXCOORD0;
-	float2 uv_Splat0 : TEXCOORD1;
-	float2 uv_Splat1 : TEXCOORD2;
-	float2 uv_Splat2 : TEXCOORD3;
-	float2 uv_Splat3 : TEXCOORD4;
-};
 
+struct Input {
+	float2 uv_Control;
+	float2 uv_Splat0;
+	float2 uv_Splat1;
+	float2 uv_Splat2;
+	float2 uv_Splat3;
+};
+    
 sampler2D _Control;
 sampler2D _Splat0,_Splat1,_Splat2,_Splat3;
 
@@ -39,7 +40,8 @@ void surf (Input IN, inout SurfaceOutput o) {
 	o.Albedo = col;
 	o.Alpha = 0.0;
 }
-ENDCG  
+
+ENDCG
 }
 
 Dependency "AddPassShader" = "Hidden/TerrainEngine/Splatmap/Lightmap-AddPass"

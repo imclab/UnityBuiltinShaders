@@ -8,8 +8,9 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 		_Occlusion ("Dir Occlusion", Range(0, 20)) = 7.5
 		
 		// These are here only to provide default values
-		_Scale ("Scale", Vector) = (1,1,1,1)
-		_SquashAmount ("Squash", Float) = 1
+		[HideInInspector] _TreeInstanceColor ("TreeInstanceColor", Vector) = (1,1,1,1)
+		[HideInInspector] _TreeInstanceScale ("TreeInstanceScale", Vector) = (1,1,1,1)
+		[HideInInspector] _SquashAmount ("Squash", Float) = 1
 	}
 	
 	SubShader {
@@ -17,6 +18,7 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 			"Queue" = "Transparent-99"
 			"IgnoreProjector"="True"
 			"RenderType" = "TreeTransparentCutout"
+			"DisableBatching"="True"
 		}
 		Cull Off
 		ColorMask RGB
@@ -26,9 +28,9 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 		
 			CGPROGRAM
 			#pragma vertex leaves
-			#pragma fragment frag 
-			#pragma glsl_no_auto_normalization
-			#include "SH_Vertex.cginc"
+			#pragma fragment frag
+			#pragma multi_compile_fog
+			#include "UnityBuiltin2xTreeLibrary.cginc"
 			
 			sampler2D _MainTex;
 			fixed _Cutoff;
@@ -39,7 +41,7 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 				c.rgb *= 2.0f * input.color.rgb;
 				
 				clip (c.a - _Cutoff);
-				
+				UNITY_APPLY_FOG(input.fogCoord, c);
 				return c;
 			}
 			ENDCG
@@ -49,14 +51,9 @@ Shader "Nature/Tree Soft Occlusion Leaves" {
 			Name "ShadowCaster"
 			Tags { "LightMode" = "ShadowCaster" }
 			
-			Fog {Mode Off}
-			ZWrite On ZTest LEqual Cull Off
-			Offset 1, 1
-	
 			CGPROGRAM
 			#pragma vertex vert
 			#pragma fragment frag
-			#pragma glsl_no_auto_normalization
 			#pragma multi_compile_shadowcaster
 			#include "UnityCG.cginc"
 			#include "TerrainEngine.cginc"

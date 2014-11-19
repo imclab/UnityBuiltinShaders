@@ -76,6 +76,17 @@ inline fixed4 LightingLambert_PrePass (SurfaceOutput s, half4 light)
 	return c;
 }
 
+
+inline half4 LightingLambert_Deferred (SurfaceOutput s, out half4 outDiffuse, out half4 outSpecRoughness, out half4 outNormal)
+{
+	outDiffuse = half4(s.Albedo, s.Alpha);
+	outSpecRoughness = 0.0;
+	outNormal = half4(s.Normal * 0.5 + 0.5, 1);
+	half4 emission = half4(s.Emission, 1);
+	return emission;
+}
+
+
 inline half4 LightingLambert_DirLightmap (SurfaceOutput s, fixed4 color, fixed4 scale, bool surfFuncWritesNormal)
 {
 	UNITY_DIRBASIS
@@ -113,6 +124,16 @@ inline fixed4 LightingBlinnPhong_PrePass (SurfaceOutput s, half4 light)
 	c.a = s.Alpha + spec * _SpecColor.a;
 	return c;
 }
+
+inline half4 LightingBlinnPhong_Deferred (SurfaceOutput s, out half4 outDiffuse, out half4 outSpecRoughness, out half4 outNormal)
+{
+	outDiffuse = half4(s.Albedo, s.Alpha);
+	outSpecRoughness = half4(_SpecColor.rgb, 1.0 - s.Specular);
+	outNormal = half4(s.Normal * 0.5 + 0.5, 1);
+	half4 emission = half4(s.Emission, 1);
+	return emission;
+}
+
 
 inline half4 LightingBlinnPhong_DirLightmap (SurfaceOutput s, fixed4 color, fixed4 scale, half3 viewDir, bool surfFuncWritesNormal, out half3 specColor)
 {

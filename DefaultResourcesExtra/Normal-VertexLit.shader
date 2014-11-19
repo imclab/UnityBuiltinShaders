@@ -1,4 +1,4 @@
-Shader "VertexLit" {
+Shader "Legacy Shaders/VertexLit" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_SpecColor ("Spec Color", Color) = (1,1,1,1)
@@ -80,10 +80,6 @@ SubShader {
 		Name "ShadowCaster"
 		Tags { "LightMode" = "ShadowCaster" }
 		
-		Fog {Mode Off}
-		ZWrite On ZTest LEqual Cull Off
-		Offset 1, 1
-
 CGPROGRAM
 #pragma vertex vert
 #pragma fragment frag
@@ -109,44 +105,6 @@ ENDCG
 
 	}
 	
-	// Pass to render object as a shadow collector
-	Pass {
-		Name "ShadowCollector"
-		Tags { "LightMode" = "ShadowCollector" }
-		
-		Fog {Mode Off}
-		ZWrite On ZTest LEqual
-
-CGPROGRAM
-#pragma vertex vert
-#pragma fragment frag
-#pragma multi_compile_shadowcollector 
-
-#define SHADOW_COLLECTOR_PASS
-#include "UnityCG.cginc"
-
-struct appdata {
-	float4 vertex : POSITION;
-};
-
-struct v2f {
-	V2F_SHADOW_COLLECTOR;
-};
-
-v2f vert (appdata v)
-{
-	v2f o;
-	TRANSFER_SHADOW_COLLECTOR(o)
-	return o;
-}
-
-fixed4 frag (v2f i) : SV_Target
-{
-	SHADOW_COLLECTOR_FRAGMENT(i)
-}
-ENDCG
-
-	}
 }
 
 }

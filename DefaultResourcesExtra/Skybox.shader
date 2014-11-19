@@ -1,22 +1,22 @@
-Shader "RenderFX/Skybox" {
+Shader "Skybox/6 Sided" {
 Properties {
 	_Tint ("Tint Color", Color) = (.5, .5, .5, .5)
-	_FrontTex ("Front (+Z)", 2D) = "white" {}
-	_BackTex ("Back (-Z)", 2D) = "white" {}
-	_LeftTex ("Left (+X)", 2D) = "white" {}
-	_RightTex ("Right (-X)", 2D) = "white" {}
-	_UpTex ("Up (+Y)", 2D) = "white" {}
-	_DownTex ("Down (-Y)", 2D) = "white" {}
+	[NoScaleOffset] _FrontTex ("Front [+Z]   (HDR)", 2D) = "grey" {}
+	[NoScaleOffset] _BackTex ("Back [-Z]   (HDR)", 2D) = "grey" {}
+	[NoScaleOffset] _LeftTex ("Left [+X]   (HDR)", 2D) = "grey" {}
+	[NoScaleOffset] _RightTex ("Right [-X]   (HDR)", 2D) = "grey" {}
+	[NoScaleOffset] _UpTex ("Up [+Y]   (HDR)", 2D) = "grey" {}
+	[NoScaleOffset] _DownTex ("Down [-Y]   (HDR)", 2D) = "grey" {}
 }
 
 SubShader {
-	Tags { "Queue"="Background" "RenderType"="Background" }
-	Cull Off ZWrite Off Fog { Mode Off }
+	Tags { "Queue"="Background" "RenderType"="Background" "PreviewType"="Skybox" }
+	Cull Off ZWrite Off
 	
 	CGINCLUDE
 	#include "UnityCG.cginc"
 
-	fixed4 _Tint;
+	half4 _Tint;
 	
 	struct appdata_t {
 		float4 vertex : POSITION;
@@ -33,13 +33,12 @@ SubShader {
 		o.texcoord = v.texcoord;
 		return o;
 	}
-	fixed4 skybox_frag (v2f i, sampler2D smp)
+	half4 skybox_frag (v2f i, sampler2D smp, half4 smpDecode)
 	{
-		fixed4 tex = tex2D (smp, i.texcoord);
-		fixed4 col;
-		col.rgb = tex.rgb + _Tint.rgb - unity_ColorSpaceGrey;
-		col.a = tex.a * _Tint.a;
-		return col;
+		half4 tex = tex2D (smp, i.texcoord);
+		half3 c = DecodeHDR (tex, smpDecode);
+		c = c + _Tint.rgb - unity_ColorSpaceGrey;
+		return half4(c, 1);
 	}
 	ENDCG
 	
@@ -48,7 +47,8 @@ SubShader {
 		#pragma vertex vert
 		#pragma fragment frag
 		sampler2D _FrontTex;
-		fixed4 frag (v2f i) : SV_Target { return skybox_frag(i,_FrontTex); }
+		half4 _FrontTex_HDR;
+		half4 frag (v2f i) : SV_Target { return skybox_frag(i,_FrontTex, _FrontTex_HDR); }
 		ENDCG 
 	}
 	Pass{
@@ -56,7 +56,8 @@ SubShader {
 		#pragma vertex vert
 		#pragma fragment frag
 		sampler2D _BackTex;
-		fixed4 frag (v2f i) : SV_Target { return skybox_frag(i,_BackTex); }
+		half4 _BackTex_HDR;
+		half4 frag (v2f i) : SV_Target { return skybox_frag(i,_BackTex, _BackTex_HDR); }
 		ENDCG 
 	}
 	Pass{
@@ -64,7 +65,8 @@ SubShader {
 		#pragma vertex vert
 		#pragma fragment frag
 		sampler2D _LeftTex;
-		fixed4 frag (v2f i) : SV_Target { return skybox_frag(i,_LeftTex); }
+		half4 _LeftTex_HDR;
+		half4 frag (v2f i) : SV_Target { return skybox_frag(i,_LeftTex, _LeftTex_HDR); }
 		ENDCG
 	}
 	Pass{
@@ -72,7 +74,8 @@ SubShader {
 		#pragma vertex vert
 		#pragma fragment frag
 		sampler2D _RightTex;
-		fixed4 frag (v2f i) : SV_Target { return skybox_frag(i,_RightTex); }
+		half4 _RightTex_HDR;
+		half4 frag (v2f i) : SV_Target { return skybox_frag(i,_RightTex, _RightTex_HDR); }
 		ENDCG
 	}	
 	Pass{
@@ -80,7 +83,8 @@ SubShader {
 		#pragma vertex vert
 		#pragma fragment frag
 		sampler2D _UpTex;
-		fixed4 frag (v2f i) : SV_Target { return skybox_frag(i,_UpTex); }
+		half4 _UpTex_HDR;
+		half4 frag (v2f i) : SV_Target { return skybox_frag(i,_UpTex, _UpTex_HDR); }
 		ENDCG
 	}	
 	Pass{
@@ -88,7 +92,8 @@ SubShader {
 		#pragma vertex vert
 		#pragma fragment frag
 		sampler2D _DownTex;
-		fixed4 frag (v2f i) : SV_Target { return skybox_frag(i,_DownTex); }
+		half4 _DownTex_HDR;
+		half4 frag (v2f i) : SV_Target { return skybox_frag(i,_DownTex, _DownTex_HDR); }
 		ENDCG
 	}
 }

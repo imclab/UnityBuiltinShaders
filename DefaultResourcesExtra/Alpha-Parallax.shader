@@ -1,4 +1,4 @@
-Shader "Transparent/Parallax Diffuse" {
+Shader "Legacy Shaders/Transparent/Parallax Diffuse" {
 Properties {
 	_Color ("Main Color", Color) = (1,1,1,1)
 	_Parallax ("Height", Range (0.005, 0.08)) = 0.02
@@ -40,5 +40,5 @@ void surf (Input IN, inout SurfaceOutput o) {
 ENDCG
 }
 
-FallBack "Transparent/Bumped Diffuse"
+FallBack "Legacy Shaders/Transparent/Bumped Diffuse"
 }

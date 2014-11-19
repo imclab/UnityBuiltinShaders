@@ -1,12 +1,12 @@
-Shader "RenderFX/Skybox Cubed" {
+Shader "Skybox/Cubemap" {
 Properties {
 	_Tint ("Tint Color", Color) = (.5, .5, .5, .5)
-	_Tex ("Cubemap", Cube) = "white" {}
+	[NoScaleOffset] _Tex ("Cubemap   (HDR)", Cube) = "grey" {}
 }
 
 SubShader {
-	Tags { "Queue"="Background" "RenderType"="Background" }
-	Cull Off ZWrite Off Fog { Mode Off }
+	Tags { "Queue"="Background" "RenderType"="Background" "PreviewType"="Skybox" }
+	Cull Off ZWrite Off
 
 	Pass {
 		
@@ -17,7 +17,8 @@ SubShader {
 		#include "UnityCG.cginc"
 
 		samplerCUBE _Tex;
-		fixed4 _Tint;
+		half4 _Tex_HDR;
+		half4 _Tint;
 		
 		struct appdata_t {
 			float4 vertex : POSITION;
@@ -39,11 +40,10 @@ SubShader {
 
 		fixed4 frag (v2f i) : SV_Target
 		{
-			fixed4 tex = texCUBE (_Tex, i.texcoord);
-			fixed4 col;
-			col.rgb = tex.rgb + _Tint.rgb - unity_ColorSpaceGrey;
-			col.a = tex.a * _Tint.a;
-			return col;
+			half4 tex = texCUBE (_Tex, i.texcoord);
+			half3 c = DecodeHDR (tex, _Tex_HDR);
+			c = c + _Tint.rgb - unity_ColorSpaceGrey;
+			return half4(c, 1);
 		}
 		ENDCG 
 	}
