@@ -72,6 +72,11 @@ Shader "UI/Unlit/Transparent"
 					v2f o;
 					o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
 					o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
+
+#ifdef UNITY_HALF_TEXEL_OFFSET
+					o.vertex.xy -= (_ScreenParams.zw-1.0);
+#endif
+
 					o.color = v.color;
 					return o;
 				}

@@ -101,6 +101,10 @@ Shader "UI/Lit/Refraction (Pro Only)"
 				o.texcoord1.zw = TRANSFORM_TEX(v.texcoord1, _MainBump);
 				o.color = v.color;
 
+#ifdef UNITY_HALF_TEXEL_OFFSET
+				o.vertex.xy -= (_ScreenParams.zw-1.0);
+#endif
+
 			#if UNITY_UV_STARTS_AT_TOP
 				o.proj.xy = (float2(o.vertex.x, -o.vertex.y) + o.vertex.w) * 0.5;
 			#else

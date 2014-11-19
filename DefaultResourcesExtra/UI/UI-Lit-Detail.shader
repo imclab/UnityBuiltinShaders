@@ -67,6 +67,7 @@ Shader "UI/Lit/Detail"
 	
 			struct Input
 			{
+				float4 vertex   : SV_POSITION;
 				half2 uv_MainTex;
 				half2 uv2_DetailTex;
 				fixed4 color : COLOR;
@@ -88,6 +89,10 @@ Shader "UI/Lit/Detail"
 				UNITY_INITIALIZE_OUTPUT(Input, o);
 				v.texcoord1.xy *= _DetailTex_TexelSize.xy;
 				v.color *= _Color;
+
+#ifdef UNITY_HALF_TEXEL_OFFSET
+				o.vertex.xy -= (_ScreenParams.zw-1.0);
+#endif
 			}
 				
 			void surf (Input IN, inout SurfaceOutput o)

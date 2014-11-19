@@ -68,7 +68,10 @@ Shader "UI/Default Font" {
 				v2f o;
 				o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
 				o.color = v.color * _Color;
-				o.texcoord = TRANSFORM_TEX(v.texcoord,_MainTex);
+				o.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
+#ifdef UNITY_HALF_TEXEL_OFFSET
+				o.vertex.xy -= (_ScreenParams.zw-1.0);
+#endif
 				return o;
 			}
 

@@ -47,20 +47,22 @@ Shader "UI/Lit/Transparent"
 		ColorMask [_ColorMask]
 
 		CGPROGRAM
-			#pragma surface surf PPL alpha
+			#pragma surface surf PPL alpha vertex:vert
 			#include "UnityCG.cginc"
 	
 			struct appdata_t
 			{
 				float4 vertex : POSITION;
 				float2 texcoord : TEXCOORD0;
-				float3 normal : NORMAL;
+				float2 texcoord1 : TEXCOORD1;
 				fixed4 color : COLOR;
+				float3 normal : NORMAL;
 			};
-	
+
 			struct Input
 			{
-				half2 uv_MainTex;
+				float4 vertex : SV_POSITION;
+				half2 uv_MainTex : TEXCOORD0;
 				fixed4 color : COLOR;
 			};
 
@@ -68,8 +70,16 @@ Shader "UI/Lit/Transparent"
 			fixed4 _Color;
 			fixed4 _Specular;
 				
-			void surf (Input IN, inout SurfaceOutput o)
+			void vert (inout appdata_t v, out Input o)
 			{
+				UNITY_INITIALIZE_OUTPUT(Input, o);
+#ifdef UNITY_HALF_TEXEL_OFFSET
+				o.vertex.xy -= (_ScreenParams.zw-1.0);
+#endif
+			}
+
+			void surf (Input IN, inout SurfaceOutput o)
+			{			
 				fixed4 col = tex2D(_MainTex, IN.uv_MainTex) * _Color * IN.color;
 				o.Albedo = col.rgb;
 				o.Alpha = col.a;

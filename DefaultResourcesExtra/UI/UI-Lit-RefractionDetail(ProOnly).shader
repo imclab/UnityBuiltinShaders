@@ -120,6 +120,10 @@ Shader "UI/Lit/Refraction Detail (Pro Only)"
 				o.texcoord3		= TRANSFORM_TEX(v.texcoord2 * _DetailMask_TexelSize.xy, _DetailMask);
 				o.color			= v.color;
 
+#ifdef UNITY_HALF_TEXEL_OFFSET
+				o.vertex.xy -= (_ScreenParams.zw-1.0);
+#endif
+
 			#if UNITY_UV_STARTS_AT_TOP
 				o.proj.xy = (float2(o.vertex.x, -o.vertex.y) + o.vertex.w) * 0.5;
 			#else

@@ -70,6 +70,9 @@ Shader "UI/Default"
 				v2f OUT;
 				OUT.vertex = mul(UNITY_MATRIX_MVP, IN.vertex);
 				OUT.texcoord = IN.texcoord;
+#ifdef UNITY_HALF_TEXEL_OFFSET
+				OUT.vertex.xy -= (_ScreenParams.zw-1.0);
+#endif
 				OUT.color = IN.color * _Color;
 				return OUT;
 			}
