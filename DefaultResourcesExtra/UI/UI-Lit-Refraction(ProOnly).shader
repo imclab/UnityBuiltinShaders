@@ -1,4 +1,4 @@
-Shader "uGUI/Lit/Refraction Detail (Pro Only)"
+Shader "UI/Lit/Refraction (Pro Only)"
 {
 	Properties
 	{
@@ -6,20 +6,19 @@ Shader "uGUI/Lit/Refraction Detail (Pro Only)"
 		_Specular ("Specular Color", Color) = (0,0,0,0)
 		_MainTex ("Diffuse (RGB), Alpha (A)", 2D) = "white" {}
 		_MainBump ("Diffuse Bump Map", 2D) = "bump" {}
-		_Mask ("Mask (Specularity, Shininess, Refraction)", 2D) = "white" {}
-		_DetailTex ("Detail (RGB)", 2D) = "white" {}
-		_DetailBump ("Detail Bump Map", 2D) = "bump" {}
-		_DetailMask ("Detail Mask (Spec, Shin, Ref)", 2D) = "white" {}
+		_Mask ("Mask (Specularity, Shininess, Refraction)", 2D) = "black" {}
 		_Shininess ("Shininess", Range(0.01, 1.0)) = 0.2
 		_Focus ("Focus", Range(-100.0, 100.0)) = -100.0
 		
 		_StencilComp ("Stencil Comparison", Float) = 8
 		_Stencil ("Stencil ID", Float) = 0
 		_StencilOp ("Stencil Operation", Float) = 0
+		_StencilWriteMask ("Stencil Write Mask", Float) = 255
+		_StencilReadMask ("Stencil Read Mask", Float) = 255
+
 		_ColorMask ("Color Mask", Float) = 15
 	}
 	
-	// SM 3.0
 	SubShader
 	{
 		LOD 400
@@ -35,13 +34,16 @@ Shader "uGUI/Lit/Refraction Detail (Pro Only)"
 			"Queue" = "Transparent"
 			"IgnoreProjector" = "True"
 			"RenderType" = "Transparent"
+			"PreviewType"="Plane"
 		}
 
 		Stencil
 		{
 			Ref [_Stencil]
 			Comp [_StencilComp]
-			Pass [_StencilOp]
+			Pass [_StencilOp] 
+			ReadMask [_StencilReadMask]
+			WriteMask [_StencilWriteMask]
 		}
 		
 		Cull Off
@@ -64,7 +66,6 @@ Shader "uGUI/Lit/Refraction Detail (Pro Only)"
 			{
 				float4 vertex : POSITION;
 				float2 texcoord1 : TEXCOORD0;
-				float2 texcoord2 : TEXCOORD1;
 				fixed4 color : COLOR;
 				float3 normal : NORMAL;
 				float4 tangent : TANGENT;
@@ -74,9 +75,7 @@ Shader "uGUI/Lit/Refraction Detail (Pro Only)"
 			{
 				float4 vertex : SV_POSITION;
 				float4 texcoord1 : TEXCOORD0;
-				float4 texcoord2 : TEXCOORD1;
-				float2 texcoord3 : TEXCOORD2;
-				float4 proj : TEXCOORD3;
+				float4 proj : TEXCOORD1;
 				fixed4 color : COLOR;
 			};
 
@@ -84,35 +83,23 @@ Shader "uGUI/Lit/Refraction Detail (Pro Only)"
 			sampler2D _MainTex;
 			sampler2D _MainBump;
 			sampler2D _Mask;
-			sampler2D _DetailTex;
-			sampler2D _DetailBump;
-			sampler2D _DetailMask;
 
 			float4 _MainTex_ST;
 			float4 _MainBump_ST;
 			float4 _Mask_ST;
-			float4 _DetailTex_ST;
-			float4 _DetailBump_ST;
-			float4 _DetailMask_ST;
-			float4 _DetailTex_TexelSize;
-			float4 _DetailBump_TexelSize;
-			float4 _DetailMask_TexelSize;
 			half4 _GrabTexture_TexelSize;
 
 			fixed4 _Color;
 			fixed4 _Specular;
 			half _Shininess;
 			half _Focus;
-
+				
 			void vert (inout appdata_t v, out Input o)
 			{
-				o.vertex		= mul(UNITY_MATRIX_MVP, v.vertex);
-				o.texcoord1.xy	= TRANSFORM_TEX(v.texcoord1, _MainTex);
-				o.texcoord1.zw	= TRANSFORM_TEX(v.texcoord1, _MainBump);
-				o.texcoord2.xy	= TRANSFORM_TEX(v.texcoord2 * _DetailTex_TexelSize.xy, _DetailTex);
-				o.texcoord2.zw	= TRANSFORM_TEX(v.texcoord2 * _DetailBump_TexelSize.xy, _DetailBump);
-				o.texcoord3		= TRANSFORM_TEX(v.texcoord2 * _DetailMask_TexelSize.xy, _DetailMask);
-				o.color			= v.color;
+				o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
+				o.texcoord1.xy = TRANSFORM_TEX(v.texcoord1, _MainTex);
+				o.texcoord1.zw = TRANSFORM_TEX(v.texcoord1, _MainBump);
+				o.color = v.color;
 
 			#if UNITY_UV_STARTS_AT_TOP
 				o.proj.xy = (float2(o.vertex.x, -o.vertex.y) + o.vertex.w) * 0.5;
@@ -121,24 +108,18 @@ Shader "uGUI/Lit/Refraction Detail (Pro Only)"
 			#endif
 				o.proj.zw = o.vertex.zw;
 			}
-
+				
 			void surf (Input IN, inout SurfaceOutput o)
 			{
 				fixed4 col = tex2D(_MainTex, IN.texcoord1.xy);
-				fixed4 detail = tex2D(_DetailTex, IN.texcoord2.xy);
-
-				half3 normal = UnpackNormal(tex2D(_MainBump, IN.texcoord1.zw)) +
-							   UnpackNormal(tex2D(_DetailBump, IN.texcoord2.zw));
-				
-				half3 mask = tex2D(_Mask, IN.texcoord1.xy) *
-							 tex2D(_DetailMask, IN.texcoord3);
+				half3 normal = UnpackNormal(tex2D(_MainBump, IN.texcoord1.zw));
+				half3 mask = tex2D(_Mask, IN.texcoord1.xy);
 
 				float2 offset = normal.xy * _GrabTexture_TexelSize.xy * _Focus;
 				IN.proj.xy = offset * IN.proj.z + IN.proj.xy;
 				half4 ref = tex2Dproj( _GrabTexture, UNITY_PROJ_COORD(IN.proj));
 
 				col.rgb = lerp(col.rgb, ref.rgb, mask.b);
-				col.rgb = lerp(col.rgb, col.rgb * detail.rgb, detail.a);
 				col *= _Color * IN.color;
 					
 				o.Albedo = col.rgb;
@@ -175,5 +156,5 @@ Shader "uGUI/Lit/Refraction Detail (Pro Only)"
 			}
 		ENDCG
 	}
-	Fallback "GUI/Lit/Detail"
+	Fallback "UI/Lit/Transparent"
 }
