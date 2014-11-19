@@ -12,10 +12,10 @@
 // ----------------------------------------------------------------------------
 
 CBUFFER_START(UnityPerCamera)
-	// Time values from Unity
-	uniform float4 _Time;
-	uniform float4 _SinTime;
-	uniform float4 _CosTime;
+	// Time (t = time since current level load) values from Unity
+	uniform float4 _Time; // (t/20, t, t*2, t*3)
+	uniform float4 _SinTime; // sin(t/8), sin(t/4), sin(t/2), sin(t)
+	uniform float4 _CosTime; // cos(t/8), cos(t/4), cos(t/2), cos(t)
 	uniform float4 unity_DeltaTime; // dt, 1/dt, smoothdt, 1/smoothdt
 	
 	uniform float3 _WorldSpaceCameraPos;
@@ -32,6 +32,11 @@ CBUFFER_START(UnityPerCamera)
 	// w = 1 + 1.0/height
 	uniform float4 _ScreenParams;
 	
+	// Values used to linearize the Z buffer (http://www.humus.name/temp/Linearize%20depth.txt)
+	// x = 1-far/near
+	// y = far/near
+	// z = x/far
+	// w = y/far
 	uniform float4 _ZBufferParams;
 
 	// x = orthographic camera's width
@@ -72,13 +77,15 @@ CBUFFER_START(UnityLighting)
 	half4 unity_4LightAtten0;
 
 	half4 unity_LightColor[8];
-	float4 unity_LightPosition[8];
-	// x = -1
-	// y = 1
+
+
+	float4 unity_LightPosition[8]; // view-space vertex light positions (position,1), or (-direction,0) for directional lights.
+	// x = cos(spotAngle/2) or -1 for non-spot
+	// y = 1/cos(spotAngle/4) or 1 for non-spot
 	// z = quadratic attenuation
-	// w = range^2
+	// w = range*range
 	half4 unity_LightAtten[8];
-	float4 unity_SpotDirection[8];
+	float4 unity_SpotDirection[8]; // view-space spot light directions, or (0,0,1,0) for non-spot
 
 	// SH lighting environment
 	half4 unity_SHAr;
@@ -169,6 +176,29 @@ CBUFFER_START(UnityFog)
 	// w = end/(end-start), useful for Linear mode
 	uniform float4 unity_FogParams;
 CBUFFER_END
+
+
+
+// ----------------------------------------------------------------------------
+// Lightmaps
+
+
+// Main lightmap
+UNITY_DECLARE_TEX2D(unity_Lightmap);
+// Dual or directional lightmap (always used with unity_Lightmap, so can share sampler)
+UNITY_DECLARE_TEX2D_NOSAMPLER(unity_LightmapInd);
+
+// Dynamic GI lightmap
+UNITY_DECLARE_TEX2D(unity_DynamicLightmap);
+UNITY_DECLARE_TEX2D_NOSAMPLER(unity_DynamicDirectionality);
+UNITY_DECLARE_TEX2D_NOSAMPLER(unity_DynamicNormal);
+
+#if defined(DYNAMICLIGHTMAP_ON)
+CBUFFER_START(UnityLightmaps)
+	float4 unity_LightmapIndScale;
+CBUFFER_END
+#endif // #if defined(DYNAMICLIGHTMAP_ON)
+
 
 
 // ----------------------------------------------------------------------------

@@ -1,13 +1,15 @@
 #ifndef HLSL_SUPPORT_INCLUDED
 #define HLSL_SUPPORT_INCLUDED
 
-
-#if defined(SHADER_API_D3D11) || defined(SHADER_API_XBOX360) || defined(SHADER_API_D3D11_9X) || defined(SHADER_API_D3D9)
-#define UNITY_COMPILER_HLSL
+#if defined(SHADER_TARGET_SURFACE_ANALYSIS)
+	// Cg is used for surface shader analysis step
+	#define UNITY_COMPILER_CG
+#elif defined(SHADER_API_D3D11) || defined(SHADER_API_XBOX360) || defined(SHADER_API_D3D11_9X) || defined(SHADER_API_D3D9) || defined(SHADER_API_XBOXONE)
+	#define UNITY_COMPILER_HLSL
 #elif defined(SHADER_TARGET_GLSL)
-#define UNITY_COMPILER_HLSL2GLSL
+	#define UNITY_COMPILER_HLSL2GLSL
 #else
-#define UNITY_COMPILER_CG
+	#define UNITY_COMPILER_CG
 #endif
 
 #if !defined(SV_Target)
@@ -110,9 +112,10 @@
 #define samplerCUBE_half samplerCUBE
 #define samplerCUBE_float samplerCUBE
 
+#define ConsumeStructuredBuffer ConsumeRegularBuffer
+#define AppendStructuredBuffer AppendRegularBuffer
 #define RWTexture2D RW_Texture2D
-
-#define RWTexture2D RW_Texture2D
+#define RWTexture3D RW_Texture3D
 
 #define CBUFFER_START(name) ConstantBuffer name {
 #define CBUFFER_END };
@@ -179,11 +182,19 @@
 #define UNITY_DECLARE_TEX2D_NOSAMPLER(tex) Texture2D tex
 #define UNITY_SAMPLE_TEX2D(tex,coord) tex.Sample (sampler##tex,coord)
 #define UNITY_SAMPLE_TEX2D_SAMPLER(tex,samplertex,coord) tex.Sample (sampler##samplertex,coord)
+#define UNITY_DECLARE_TEXCUBE(tex) TextureCube tex; SamplerState sampler##tex
+#define UNITY_ARGS_TEXCUBE(tex) TextureCube tex, SamplerState sampler##tex
+#define UNITY_PASS_TEXCUBE(tex) tex, sampler##tex
+#define UNITY_DECLARE_TEXCUBE_NOSAMPLER(tex) TextureCube tex
 #else
 #define UNITY_DECLARE_TEX2D(tex) sampler2D tex
 #define UNITY_DECLARE_TEX2D_NOSAMPLER(tex) sampler2D tex
 #define UNITY_SAMPLE_TEX2D(tex,coord) tex2D (tex,coord)
 #define UNITY_SAMPLE_TEX2D_SAMPLER(tex,samplertex,coord) tex2D (tex,coord)
+#define UNITY_DECLARE_TEXCUBE(tex) samplerCUBE tex
+#define UNITY_ARGS_TEXCUBE(tex) samplerCUBE tex
+#define UNITY_PASS_TEXCUBE(tex) tex
+#define UNITY_DECLARE_TEXCUBE_NOSAMPLER(tex) samplerCUBE tex
 #endif
 
 
@@ -366,7 +377,10 @@ float4 tex2Dproj(in sampler2D s, in float3 t)
 #endif
 
 
-#if defined(UNITY_COMPILER_HLSL)
+// Initialize arbitrary structure with zero values.
+// Not supported on some backends (e.g. Cg-based like PS3 and particularly with nested structs).
+// hlsl2glsl would almost support it, except with structs that have arrays -- so treat as not supported there either :(
+#if defined(UNITY_COMPILER_HLSL) || defined(SHADER_API_PSSL)
 #define UNITY_INITIALIZE_OUTPUT(type,name) name = (type)0;
 #else
 #define UNITY_INITIALIZE_OUTPUT(type,name)
@@ -386,6 +400,12 @@ float4 tex2Dproj(in sampler2D s, in float3 t)
 #	define SV_TessFactor				S_EDGE_TESS_FACTOR
 #	define SV_InsideTessFactor			S_INSIDE_TESS_FACTOR
 #	define SV_DomainLocation			S_DOMAIN_LOCATION
+#   define SV_DispatchThreadID          S_DISPATCH_THREAD_ID
+#	define SV_GroupID					S_GROUP_ID
+#	define SV_GroupThreadID				S_GROUP_THREAD_ID
+#	define SV_GroupIndex				S_GROUP_INDEX
+
+#	define groupshared					thread_group_memory
 
 #	define UNITY_domain					DOMAIN_PATCH_TYPE
 #	define UNITY_partitioning			PARTITIONING_TYPE

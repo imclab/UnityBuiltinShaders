@@ -26,7 +26,6 @@ SubShader {
 		Name "ForwardBase"
 
 	CGPROGRAM
-		fixed4 _LightColor0;
 		#include "UnityBuiltin3xTreeLibrary.cginc"
 
 		#pragma vertex VertexLeaf
@@ -64,7 +63,7 @@ SubShader {
 						
 			fixed3 color = v.color.rgb * ao;
 			
-			float3 worldN = UnityObjectToWorldNorm(v.normal);
+			float3 worldN = UnityObjectToWorldNormal (v.normal);
 
 			fixed4 mainLight;
 			mainLight.rgb = ShadeTranslucentMainLight (v.vertex, worldN) * color;

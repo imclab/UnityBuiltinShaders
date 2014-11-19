@@ -49,7 +49,6 @@ Shader "UI/Lit/Bumped"
 
 		CGPROGRAM
 			#pragma surface surf PPL alpha noshadow novertexlights nolightmap nofog
-			#pragma target 3.0
 			#include "UnityCG.cginc"
 	
 			struct appdata_t

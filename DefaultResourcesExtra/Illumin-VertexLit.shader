@@ -28,7 +28,8 @@ SubShader {
 			combine constant lerp (texture) previous
 		}
 		SetTexture [_MainTex] {
-			Combine texture * previous, texture*primary
+			constantColor (1,1,1,1)
+			Combine texture * previous, constant // UNITY_OPAQUE_ALPHA_FFP
 		}
 	}
 }

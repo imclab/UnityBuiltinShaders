@@ -45,7 +45,7 @@ v2f vert(appdata_tan v)
 	
 	o.I = -WorldSpaceViewDir( v.vertex );
 	
-	float3 worldNormal = UnityObjectToWorldNorm(v.normal);
+	float3 worldNormal = UnityObjectToWorldNormal(v.normal);
 	float3 worldTangent = UnityObjectToWorldDir(v.tangent.xyz);
 	float3 worldBinormal = cross(worldNormal, worldTangent) * v.tangent.w;
 	o.TtoW0 = float3(worldTangent.x, worldBinormal.x, worldNormal.x);
@@ -83,6 +83,7 @@ fixed4 frag (v2f i) : SV_Target
 	fixed4 reflcolor = texCUBE(_Cube, r) * _ReflectColor * texcol.a;
 	c = c + reflcolor;
 	UNITY_APPLY_FOG(i.fogCoord, c);
+	UNITY_OPAQUE_ALPHA(c.a);
 	return c;
 }
 ENDCG  

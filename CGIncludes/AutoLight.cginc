@@ -4,7 +4,7 @@
 #include "HLSLSupport.cginc"
 #include "UnityShadowLibrary.cginc"
 
-#if defined (SHADER_API_SM2) || defined(SHADER_API_MOBILE)
+#if (SHADER_TARGET < 30) || defined(SHADER_API_MOBILE)
 	// We prefer performance over quality on SM2.0 and Mobiles
 	#define unityShadowCoord half
 	#define unityShadowCoord2 half2

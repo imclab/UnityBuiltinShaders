@@ -34,6 +34,7 @@ Shader "Nature/Tree Soft Occlusion Bark" {
 				fixed4 col = input.color;
 				col.rgb *= 2.0f * tex2D( _MainTex, input.uv.xy).rgb;
 				UNITY_APPLY_FOG(input.fogCoord, col);
+				UNITY_OPAQUE_ALPHA(col.a);
 				return col;
 			}
 			ENDCG

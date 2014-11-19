@@ -43,6 +43,7 @@ SubShader {
 			{
 				fixed4 col = _Color;
 				UNITY_APPLY_FOG(i.fogCoord, col);
+				UNITY_OPAQUE_ALPHA(col.a);
 				return col;
 			}
 		ENDCG

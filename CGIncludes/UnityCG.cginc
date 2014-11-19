@@ -92,7 +92,7 @@ inline float3 UnityWorldToObjectDir( in float3 dir )
 }
 
 // Transforms normal from object to world space
-inline float3 UnityObjectToWorldNorm( in float3 norm )
+inline float3 UnityObjectToWorldNormal( in float3 norm )
 {
 	// Multiply by transposed inverse matrix, actually using transpose() generates badly optimized code
 	return normalize(_World2Object[0].xyz * norm.x + _World2Object[1].xyz * norm.y + _World2Object[2].xyz * norm.z);
@@ -163,7 +163,7 @@ inline float3 ObjSpaceViewDir( in float4 v )
 
 
 
-
+// Used in ForwardBase pass: Calculates diffuse lighting from 4 point lights, with data packed in a special way.
 float3 Shade4PointLights (
 	float4 lightPosX, float4 lightPosY, float4 lightPosZ,
 	float3 lightColor0, float3 lightColor1, float3 lightColor2, float3 lightColor3,
@@ -199,22 +199,36 @@ float3 Shade4PointLights (
 	return col;
 }
 
-
-float3 ShadeVertexLights (float4 vertex, float3 normal)
+// Used in Vertex pass: Calculates diffuse lighting from lightCount lights. Specifying true to spotLight is more expensive
+// to calculate but lights are treated as spot lights otherwise they are treated as point lights.
+float3 ShadeVertexLightsFull (float4 vertex, float3 normal, int lightCount, bool spotLight)
 {
 	float3 viewpos = mul (UNITY_MATRIX_MV, vertex).xyz;
 	float3 viewN = normalize (mul ((float3x3)UNITY_MATRIX_IT_MV, normal));
 	float3 lightColor = UNITY_LIGHTMODEL_AMBIENT.xyz;
-	for (int i = 0; i < 4; i++) {
+	for (int i = 0; i < lightCount; i++) {
 		float3 toLight = unity_LightPosition[i].xyz - viewpos.xyz * unity_LightPosition[i].w;
 		float lengthSq = dot(toLight, toLight);
+		toLight *= rsqrt(lengthSq);
+
 		float atten = 1.0 / (1.0 + lengthSq * unity_LightAtten[i].z);
-		float diff = max (0, dot (viewN, normalize(toLight)));
+		if (spotLight)
+		{
+			float rho = max (0, dot(toLight, unity_SpotDirection[i].xyz));
+			float spotAtt = (rho - unity_LightAtten[i].x) * unity_LightAtten[i].y;
+			atten *= saturate(spotAtt);
+		}
+
+		float diff = max (0, dot (viewN, toLight));
 		lightColor += unity_LightColor[i].rgb * (diff * atten);
 	}
 	return lightColor;
 }
 
+float3 ShadeVertexLights (float4 vertex, float3 normal)
+{
+	return ShadeVertexLightsFull (vertex, normal, 4, false);
+}
 
 // normal should be normalized, w=1.0
 half3 ShadeSH9 (half4 normal)
@@ -292,18 +306,32 @@ inline half3 DecodeHDR (half4 data, half4 decodeInstructions)
 	#endif
 }
 
-// Decodes lightmaps:
-// - doubleLDR encoded on GLES
-// - RGBM encoded with range [0;8] on other platforms using surface shaders
-inline fixed3 DecodeLightmap( fixed4 color )
+// Decodes doubleLDR encoded lightmaps.
+inline fixed3 DecodeLightmapDoubleLDR( fixed4 color )
 {
-#if defined(UNITY_NO_RGBM)
 	return 2.0 * color.rgb;
-#else
+}
+
+// Decodes RGBM encoded lightmaps with range [0;8].
+inline fixed3 DecodeLightmapRGBM( fixed4 color )
+{
 	// potentially faster to do the scalar multiplication
 	// in parenthesis for scalar GPUs
 	return (8.0 * color.a) * color.rgb;
+}
+
+inline fixed3 DecodeLightmap( fixed4 color )
+{
+#if defined(UNITY_NO_RGBM)
+	return DecodeLightmapDoubleLDR( color );
+#else
+	return DecodeLightmapRGBM( color );
 #endif
+}
+
+inline fixed3 DecodeRealtimeLightmap( fixed4 color )
+{
+	return DecodeLightmapRGBM( color );
 }
 
 // Helpers used in image effects. Most image effects use the same
@@ -548,6 +576,12 @@ float UnityDecodeCubeShadowDepth (float4 vals)
 
 
 // ------------------------------------------------------------------
+//  Alpha helper
+
+#define UNITY_OPAQUE_ALPHA(outputAlpha) outputAlpha = 1.0
+
+
+// ------------------------------------------------------------------
 //  Fog helpers
 //
 //	multi_compile_fog Will compile fog variants.
@@ -564,26 +598,46 @@ float UnityDecodeCubeShadowDepth (float4 vals)
 #undef FOG_EXP2
 #endif
 
-#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
-#define UNITY_FOG_COORDS(idx) float fogCoord : TEXCOORD##idx;
-#define UNITY_TRANSFER_FOG(o,outpos) o.fogCoord = (outpos).z
+
+#if defined(FOG_LINEAR)
+	// factor = (end-z)/(end-start) = z * (-1/(end-start)) + (end/(end-start))
+	#define UNITY_CALC_FOG_FACTOR(coord) float unityFogFactor = (coord) * unity_FogParams.z + unity_FogParams.w
+#elif defined(FOG_EXP)
+	// factor = exp(-density*z)
+	#define UNITY_CALC_FOG_FACTOR(coord) float unityFogFactor = unity_FogParams.y * (coord); unityFogFactor = exp2(-unityFogFactor)
+#elif defined(FOG_EXP2)
+	// factor = exp(-(density*z)^2)
+	#define UNITY_CALC_FOG_FACTOR(coord) float unityFogFactor = unity_FogParams.x * (coord); unityFogFactor = exp2(-unityFogFactor*unityFogFactor)
 #else
-#define UNITY_FOG_COORDS(idx)
-#define UNITY_TRANSFER_FOG(o,outpos)
+	#define UNITY_CALC_FOG_FACTOR(coord) float unityFogFactor = 0.0
+#endif
+
+
+#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
+	#define UNITY_FOG_COORDS(idx) float fogCoord : TEXCOORD##idx;
+	#if (SHADER_TARGET < 30) || defined(SHADER_API_MOBILE)
+		// mobile or SM2.0: calculate fog factor per-vertex
+		#define UNITY_TRANSFER_FOG(o,outpos) UNITY_CALC_FOG_FACTOR((outpos).z); o.fogCoord = unityFogFactor
+	#else
+		// SM3.0 and PC/console: calculate fog distance per-vertex, and fog factor per-pixel
+		#define UNITY_TRANSFER_FOG(o,outpos) o.fogCoord = (outpos).z
+	#endif
+#else
+	#define UNITY_FOG_COORDS(idx)
+	#define UNITY_TRANSFER_FOG(o,outpos)
 #endif
 
 #define UNITY_FOG_LERP_COLOR(col,fogCol,fogFac) col.rgb = lerp((fogCol).rgb, (col).rgb, saturate(fogFac))
 
 
-#if defined(FOG_LINEAR)
-	// factor = (end-z)/(end-start) = z * (-1/(end-start)) + (end/(end-start))
-	#define UNITY_APPLY_FOG_COLOR(coord,col,fogCol) float fogFac = (coord) * unity_FogParams.z + unity_FogParams.w; UNITY_FOG_LERP_COLOR(col,fogCol,fogFac)
-#elif defined(FOG_EXP)
-	// factor = exp(-density*z)
-	#define UNITY_APPLY_FOG_COLOR(coord,col,fogCol) float fogFac = unity_FogParams.y * (coord); fogFac = exp2(-fogFac); UNITY_FOG_LERP_COLOR(col,fogCol,fogFac)
-#elif defined(FOG_EXP2)
-	// factor = exp(-(density*z)^2)
-	#define UNITY_APPLY_FOG_COLOR(coord,col,fogCol) float fogFac = unity_FogParams.x * (coord); fogFac = exp2(-fogFac*fogFac); UNITY_FOG_LERP_COLOR(col,fogCol,fogFac)
+#if defined(FOG_LINEAR) || defined(FOG_EXP) || defined(FOG_EXP2)
+	#if (SHADER_TARGET < 30) || defined(SHADER_API_MOBILE)
+		// mobile or SM2.0: fog factor was already calculated per-vertex, so just lerp the color
+		#define UNITY_APPLY_FOG_COLOR(coord,col,fogCol) UNITY_FOG_LERP_COLOR(col,fogCol,coord)
+	#else
+		// SM3.0 and PC/console: calculate fog factor and lerp fog color
+		#define UNITY_APPLY_FOG_COLOR(coord,col,fogCol) UNITY_CALC_FOG_FACTOR(coord); UNITY_FOG_LERP_COLOR(col,fogCol,unityFogFactor)
+	#endif
 #else
 	#define UNITY_APPLY_FOG_COLOR(coord,col,fogCol)
 #endif

@@ -22,7 +22,6 @@ SubShader {
 		
 		struct appdata_t {
 			float4 vertex : POSITION;
-			float3 texcoord : TEXCOORD0;
 		};
 
 		struct v2f {
@@ -34,7 +33,7 @@ SubShader {
 		{
 			v2f o;
 			o.vertex = mul(UNITY_MATRIX_MVP, v.vertex);
-			o.texcoord = v.texcoord;
+			o.texcoord = v.vertex;
 			return o;
 		}
 

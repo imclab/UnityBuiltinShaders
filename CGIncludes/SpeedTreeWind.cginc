@@ -243,7 +243,7 @@ float Turbulence(float fTime, float fOffset, float fGlobalTime, float fTurbulenc
 //  This function positions any tree geometry based on their untransformed 
 //	position and 4 wind floats.
 
-float3 GlobalWind(float3 vPos, float3 vInstancePos, bool bPreserveShape, float3 vRotatedWindVector)
+float3 GlobalWind(float3 vPos, float3 vInstancePos, bool bPreserveShape, float3 vRotatedWindVector, float time)
 {
 	// WIND_LOD_GLOBAL may be on, but if the global wind effect (WIND_EFFECT_GLOBAL_ST_Wind)
 	// was disabled for the tree in the Modeler, we should skip it
@@ -262,7 +262,7 @@ float3 GlobalWind(float3 vPos, float3 vInstancePos, bool bPreserveShape, float3 
 		fAdjust = pow(fAdjust, _ST_WindGlobal.w);
 
 	// primary oscillation
-	float4 vOscillations = TrigApproximate(float4(vInstancePos.x + _ST_WindGlobal.x, vInstancePos.y + _ST_WindGlobal.x * 0.8, 0.0, 0.0));
+	float4 vOscillations = TrigApproximate(float4(vInstancePos.x + time, vInstancePos.y + time * 0.8, 0.0, 0.0));
 	float fOsc = vOscillations.x + (vOscillations.y * vOscillations.y);
 	float fMoveAmount = _ST_WindGlobal.y * fOsc;
 

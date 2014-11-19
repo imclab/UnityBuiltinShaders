@@ -46,6 +46,7 @@ v2f vert (appdata v)
 	return o;
 }
 sampler2D_float _CameraDepthTexture;
+float4 unity_ShadowBlurParams;
 float4 unity_ShadowMapSize;
 
 CBUFFER_START(UnityPerCamera2)
@@ -248,7 +249,8 @@ fixed4 frag (v2f i) : SV_Target
 	fixed4 res;
 	res.x = shadow;
 	res.y = 1.0;
-	res.zw = EncodeFloatRG (1 - depth);
+	// convert from full depth range to shadow range
+	res.zw = EncodeFloatRG (1 - depth * unity_ShadowBlurParams.z);
 	return res;	
 }
 ENDCG
@@ -301,6 +303,8 @@ Pass {
 	}
 	ENDCG
 }
+}
+SubShader {
 Pass {
 	ZWrite Off ZTest Always Cull Off
 
@@ -312,6 +316,5 @@ Pass {
 	ENDCG
 }
 } // pcf 5x5 subshader
-
 Fallback Off
 }

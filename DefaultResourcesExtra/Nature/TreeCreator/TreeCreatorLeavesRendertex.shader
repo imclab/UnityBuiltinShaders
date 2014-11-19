@@ -17,7 +17,6 @@ CGPROGRAM
 #pragma vertex vert
 #pragma fragment frag
 #include "UnityCG.cginc"
-#include "Lighting.cginc"
 #include "UnityBuiltin3xTreeLibrary.cginc"
 
 struct v2f {

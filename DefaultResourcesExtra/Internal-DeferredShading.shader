@@ -17,11 +17,6 @@ Pass {
 
 CGPROGRAM
 #pragma target 3.0
-#if !defined(SHADER_API_MOBILE)
-	#define UNITY_BRDF_PBS BRDF1_Unity_PBS
-#else
-	#define UNITY_BRDF_PBS BRDF2_Unity_PBS
-#endif
 #pragma vertex vert_deferred
 #pragma fragment frag
 #pragma multi_compile_lightpass
@@ -31,8 +26,9 @@ CGPROGRAM
 
 #include "UnityCG.cginc"
 #include "UnityDeferredLibrary.cginc"
-#include "UnityUniversalUtils.cginc"
-#include "UnityUniversalBRDF.cginc"
+#include "UnityPBSLighting.cginc"
+#include "UnityStandardUtils.cginc"
+#include "UnityStandardBRDF.cginc"
 
 sampler2D _CameraGBufferTexture0;
 sampler2D _CameraGBufferTexture1;
@@ -54,14 +50,14 @@ half4 CalculateLight (unity_v2f_deferred i)
 	light.color = _LightColor.rgb * atten;
 	half3 baseColor = gbuffer0.rgb;
 	half3 specColor = gbuffer1.rgb;
-	half roughness = gbuffer1.a;
+	half oneMinusRoughness = gbuffer1.a;
 	half3 normalWorld = gbuffer2.rgb * 2 - 1;
 	normalWorld = normalize(normalWorld);
 	float3 eyeVec = normalize(wpos-_WorldSpaceCameraPos);
-	half specular = RGBToLuminance(specColor.rgb);
+	half oneMinusReflectivity = 1 - SpecularStrength(specColor.rgb);
 	light.ndotl = LambertTerm (normalWorld, light.dir);
 	light.ambient = 0;
-    half4 res = UNITY_BRDF_PBS (baseColor, specColor, specular, roughness, normalWorld, -eyeVec, light, 0);
+    half4 res = UNITY_BRDF_PBS (baseColor, specColor, oneMinusReflectivity, oneMinusRoughness, normalWorld, -eyeVec, light, 0);
 
 	return res;
 }

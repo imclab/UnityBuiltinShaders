@@ -71,8 +71,6 @@ void surf (Input IN, inout SurfaceOutput o) {
 
 	o.Gloss = col.a * splatSum;
 	o.Specular = _Shininess;
-
-	o.Alpha = 0.0;
 }
 ENDCG  
 }

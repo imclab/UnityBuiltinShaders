@@ -130,7 +130,7 @@ void OffsetSpeedTreeVertex(inout SpeedTreeVB Data, float LodValue)
 		if (windQuality > WIND_QUALITY_NONE)
 		{
 			// global wind
-			FinalPosition = GlobalWind(FinalPosition, TreePos, true, vRotatedWindVector);
+			FinalPosition = GlobalWind(FinalPosition, TreePos, true, vRotatedWindVector, _ST_WindGlobal.x);
 		}
 	#endif
 

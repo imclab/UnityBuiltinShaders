@@ -51,7 +51,6 @@ Shader "UI/Lit/Detail"
 
 		CGPROGRAM
 			#pragma surface surf PPL alpha noshadow novertexlights nolightmap vertex:vert nofog
-			#pragma target 3.0
 
 			#include "UnityCG.cginc"
 	
@@ -139,4 +138,5 @@ Shader "UI/Lit/Detail"
 			}
 		ENDCG
 	}
+	Fallback "UI/Lit/Transparent"
 }

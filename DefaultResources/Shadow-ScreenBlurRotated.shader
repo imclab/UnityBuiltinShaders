@@ -14,11 +14,11 @@ CGPROGRAM
 
 
 #if SHADER_API_PS3
-#	define shadowPrecission float
-#	define shadowPrecission4 float4
+#	define PrecisionType float
+#	define PrecisionType4 float4
 #else
-#	define shadowPrecission half
-#	define shadowPrecission4 half4
+#	define PrecisionType half
+#	define PrecisionType4 half4
 #endif
 
 
@@ -46,9 +46,9 @@ inline float2 GetRotatedTexCoord(float2 offsets, float4 rotation)
 
 float4 unity_ShadowBlurParams;
 #define LOOP_ITERATION(i) { 	\
-	shadowPrecission4 theSample = tex2D( _MainTex, coord + radius * GetRotatedTexCoord(_BlurOffsets##i.xy, rotation) ); \
-	shadowPrecission sampleDist = theSample.b + theSample.a / 255.0; \
-	shadowPrecission diff = dist - sampleDist; \
+	PrecisionType4 theSample = tex2D( _MainTex, coord + radius * GetRotatedTexCoord(_BlurOffsets##i.xy, rotation) ); \
+	PrecisionType sampleDist = theSample.b + theSample.a / 255.0; \
+	PrecisionType diff = dist - sampleDist; \
 	diff = saturate( diffTolerance - abs(diff) ); \
 	mask.xy += diff * theSample.xy; }
 
@@ -57,12 +57,12 @@ fixed4 frag (v2f_img i) : SV_Target
 	float4 coord = float4(i.uv,0,0);
 	const float randomRotationTextureSize = 16.0f;
 	
-	shadowPrecission4 rotation = 2.0 * tex2D( unity_RandomRotation16, (coord.xy * _ScreenParams.xy) / randomRotationTextureSize ) - 1.0;
-	shadowPrecission4 mask = tex2D( _MainTex, coord.xy );
-	shadowPrecission dist = mask.b + mask.a / 255.0;
-	shadowPrecission radius = saturate(unity_ShadowBlurParams.y / (1.0-dist));
+	PrecisionType4 rotation = 2.0 * tex2D( unity_RandomRotation16, (coord.xy * _ScreenParams.xy) / randomRotationTextureSize ) - 1.0;
+	PrecisionType4 mask = tex2D( _MainTex, coord.xy );
+	PrecisionType dist = mask.b + mask.a / 255.0;
+	PrecisionType radius = saturate(unity_ShadowBlurParams.y / (1.0-dist));
 	
-	shadowPrecission diffTolerance = unity_ShadowBlurParams.x;
+	PrecisionType diffTolerance = unity_ShadowBlurParams.x;
 	
 	mask.xy *= diffTolerance;
 
@@ -81,7 +81,7 @@ fixed4 frag (v2f_img i) : SV_Target
 	LOOP_ITERATION (6);
 	LOOP_ITERATION (7);
 
-	shadowPrecission shadow = mask.x / mask.y;
+	PrecisionType shadow = mask.x / mask.y;
 	return shadow;
 }
 ENDCG

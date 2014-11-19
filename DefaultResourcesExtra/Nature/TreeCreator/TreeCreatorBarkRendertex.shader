@@ -77,6 +77,7 @@ fixed4 frag (v2f i) : SV_Target
 	fixed4 c;
 	c.rgb = light * 2.0;
 	c.a = 1.0;
+	UNITY_OPAQUE_ALPHA(c.a);
 	return c;
 }
 ENDCG

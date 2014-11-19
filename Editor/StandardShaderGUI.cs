@@ -6,18 +6,22 @@ using System;
 namespace UnityEditor
 {
 
-// We will be using 'UniversalShaderEditor' as class name until we change the shader
-// name to 'Standard.shader' (then we will use StandardShaderGUI)
-
-internal class UniversalShaderEditor : ShaderGUI
+internal class StandardShaderGUI : ShaderGUI
 {
-	public enum BlendMode
-	{
-		Opaque,
-		Cutout,
-		Transparent
-	}
-	
+    private enum WorkflowMode
+    {
+        Specular,
+        Metallic,
+        Dielectric
+    }
+
+    public enum BlendMode
+    {
+        Opaque,
+        Cutout,
+        Transparent
+    }
+
 	private static class Styles
 	{
 		public static GUIStyle optionsButton = "PaneOptions";
@@ -25,21 +29,22 @@ internal class UniversalShaderEditor : ShaderGUI
 		public static GUIContent[] uvSetOptions = new GUIContent[] { new GUIContent("UV channel 0"), new GUIContent("UV channel 1") };
 
 		public static string emptyTootip = "";
-		public static string diffuseTooltip = "Diffuse (RGB) and Transparency (A)";
+		public static string albedoTooltip = "Albedo (RGB) and Transparency (A)";
 		public static string specularMapTooltip = "Specular (RGB) and Smoothness (A)";
-		public static string normalMapTooltip = "Normal Map (RGB)";
-		public static string heightMapTooltip = "Height Map Greyscale (RGB)";
-		public static string occlusionTooltip = "Occlusion Greyscale (RGB)";
+		public static string metallicMapTooltip = "Metallic (R) and Smoothness (A)";
+		public static string normalMapTooltip = "Normal Map";
+		public static string heightMapTooltip = "Height Map (G)";
+		public static string occlusionTooltip = "Occlusion (G)";
 		public static string emissionTooltip = "Emission (RGB)";
-		public static string detailMaskTooltip = "Detail Mask for Secondary Maps (A)";
-		public static string detailDiffuseTooltip = "Diffuse (RGB) multiplied by 2";
-		public static string detailNormalMapTooltip = "Detail Normal Map (RGB)";
+		public static string detailMaskTooltip = "Mask for Secondary Maps (A)";
+		public static string detailAlbedoTooltip = "Albedo (RGB) multiplied by 2";
+		public static string detailNormalMapTooltip = "Normal Map";
 
 		public static string whiteSpaceString = " ";
 		public static string primaryMapsText = "Main Maps";
 		public static string secondaryMapsText = "Secondary Maps";
 		public static string renderingMode = "Rendering Mode";
-
+		public static GUIContent emissiveWarning = new GUIContent ("Emissive value is animated but the material has not been configured to support emissive. Please make sure the material itself has some amount of emissive.");
 		public static readonly string[] blendNames = Enum.GetNames (typeof (BlendMode));
 	}
 
@@ -49,6 +54,8 @@ internal class UniversalShaderEditor : ShaderGUI
 	MaterialProperty alphaCutoff = null;
 	MaterialProperty specularMap = null;
 	MaterialProperty specularColor = null;
+	MaterialProperty metallicMap = null;
+	MaterialProperty metallic = null;
 	MaterialProperty smoothness = null;
 	MaterialProperty bumpScale = null;
 	MaterialProperty bumpMap = null;
@@ -59,6 +66,7 @@ internal class UniversalShaderEditor : ShaderGUI
 	MaterialProperty emissionScale = null;
 	MaterialProperty emissionColor = null;
 	MaterialProperty emissionColorWithMap = null;
+	MaterialProperty emissionColorForRendering = null;
 	MaterialProperty emissionMap = null;
 	MaterialProperty detailMask = null;
 	MaterialProperty detailAlbedoMap = null;
@@ -68,6 +76,7 @@ internal class UniversalShaderEditor : ShaderGUI
 	MaterialProperty lightmapping = null;
 
 	MaterialEditor m_MaterialEditor;
+	WorkflowMode m_WorkflowMode = WorkflowMode.Specular;
 
 	bool m_FirstTimeApply = true;
 	const int kSecondLevelIndentOffset = 2;
@@ -75,22 +84,31 @@ internal class UniversalShaderEditor : ShaderGUI
 
 	public void FindProperties (MaterialProperty[] props)
 	{
-		blendMode = FindProperty("_Mode", props);
+		blendMode = FindProperty ("_Mode", props);
 		albedoMap = FindProperty ("_MainTex", props);
 		albedoColor = FindProperty ("_Color", props);
 		alphaCutoff = FindProperty ("_AlphaTestRef", props);
-		specularMap = FindProperty ("_SpecGlossMap", props);
-		specularColor = FindProperty ("_SpecularColor", props);
+		specularMap = FindProperty ("_SpecGlossMap", props, false);
+		specularColor = FindProperty ("_SpecColor", props, false);
+		metallicMap = FindProperty ("_MetallicGlossMap", props, false);
+		metallic = FindProperty ("_Metallic", props, false);
+		if (specularMap != null && specularColor != null)
+			m_WorkflowMode = WorkflowMode.Specular;
+		else if (metallicMap != null && metallic != null)
+			m_WorkflowMode = WorkflowMode.Metallic;
+		else
+			m_WorkflowMode = WorkflowMode.Dielectric;
 		smoothness = FindProperty ("_Glossiness", props);
 		bumpScale = FindProperty ("_BumpScale", props);
 		bumpMap = FindProperty ("_BumpMap", props);
 		heigtMapScale = FindProperty ("_Parallax", props);
 		heightMap = FindProperty("_ParallaxMap", props);
 		occlusionStrength = FindProperty ("_OcclusionStrength", props);
-		occlusionMap = FindProperty ("_Occlusion", props);
+		occlusionMap = FindProperty ("_OcclusionMap", props);
 		emissionScale = FindProperty ("_EmissionScaleUI", props);
 		emissionColor = FindProperty ("_EmissionColorUI", props);
 		emissionColorWithMap = FindProperty ("_EmissionColorWithMapUI", props);
+		emissionColorForRendering = FindProperty ("_EmissionColor", props);
 		emissionMap = FindProperty ("_EmissionMap", props);
 		detailMask = FindProperty ("_DetailMask", props);
 		detailAlbedoMap = FindProperty ("_DetailAlbedoMap", props);
@@ -135,13 +153,17 @@ internal class UniversalShaderEditor : ShaderGUI
 			const float extraSpacing = 4f;
 
 			r.y += HeaderSection (r, Styles.primaryMapsText, albedoMap) + extraSpacing;
-			r.y += DoDiffuseArea (r, albedoMap, albedoColor, material) + extraSpacing;
-			r.y += DoSpecularArea (r, specularMap, specularColor, smoothness) + extraSpacing;
+			r.y += DoAlbedoArea (r, albedoMap, albedoColor, material) + extraSpacing;
+			if (m_WorkflowMode == WorkflowMode.Specular)
+				r.y += DoSpecularArea (r, specularMap, specularColor, smoothness) + extraSpacing;
+			else if (m_WorkflowMode == WorkflowMode.Metallic)
+				r.y += DoMetallicArea (r, metallicMap, metallic, smoothness) + extraSpacing;
+
 			r.y += DoTextureAndFloatProperty (r, bumpMap, bumpScale, Styles.normalMapTooltip) + extraSpacing;
 
 			r.y += DoTextureAndFloatProperty (r, heightMap, heigtMapScale, Styles.heightMapTooltip) + extraSpacing;
 			r.y += DoTextureAndFloatProperty (r, occlusionMap, occlusionStrength, Styles.occlusionTooltip) + extraSpacing;
-			r.y += DoEmissionArea (r, emissionMap, emissionColor, emissionColorWithMap, emissionScale) + extraSpacing;
+			r.y += DoEmissionArea (r, emissionMap, emissionColor, emissionColorWithMap, emissionScale, material) + extraSpacing;
 			r.y += DoTextureAndFloatProperty (r, detailMask, null, Styles.detailMaskTooltip) + extraSpacing;
 			r.y += SettingsSection (r, albedoMap);
 
@@ -161,6 +183,38 @@ internal class UniversalShaderEditor : ShaderGUI
 				MaterialChanged ((Material)obj);
 		}
 	}
+
+    public static void SetupMaterialWithBlendMode(Material material, BlendMode blendMode)
+    {
+        switch (blendMode)
+        {
+            case BlendMode.Opaque:
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                material.SetInt("_ZWrite", 1);
+                material.DisableKeyword("_ALPHATEST_ON");
+                material.DisableKeyword("_ALPHABLEND_ON");
+                material.renderQueue = -1;
+                break;
+            case BlendMode.Cutout:
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+                material.SetInt("_ZWrite", 1);
+                material.EnableKeyword("_ALPHATEST_ON");
+                material.DisableKeyword("_ALPHABLEND_ON");
+                material.renderQueue = 2450;
+                break;
+            case BlendMode.Transparent:
+                material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+                material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+                material.SetInt("_ZWrite", 0);
+                material.DisableKeyword("_ALPHATEST_ON");
+                material.EnableKeyword("_ALPHABLEND_ON");
+                material.renderQueue = 3000;
+                break;
+        }
+    }
+
 	void BlendModePopup()
 	{
 		EditorGUI.showMixedValue = blendMode.hasMixedValue;
@@ -214,6 +268,17 @@ internal class UniversalShaderEditor : ShaderGUI
 		return actualHeight;
 	}
 
+	static void WarningBox (ref Rect r, GUIContent content)
+	{
+		r.y = r.yMax + 2;
+
+		float height = EditorStyles.helpBox.CalcHeight (content, r.width);
+		r.height = height;
+		EditorGUI.HelpBox (r, content.text, MessageType.Warning);
+
+		r.y += 2;
+	}
+
 	// Returns rect after EditorGUIUtility.labelWidth
 	Rect GetRectAfterLabelWidth (Rect r)
 	{
@@ -227,7 +292,7 @@ internal class UniversalShaderEditor : ShaderGUI
 	}
 
 	// Returns height used + spacing
-	float DoDiffuseArea (Rect r, MaterialProperty textureProp, MaterialProperty colorProp, Material material)
+	float DoAlbedoArea (Rect r, MaterialProperty textureProp, MaterialProperty colorProp, Material material)
 	{
 		float startY = r.y;
 
@@ -235,13 +300,13 @@ internal class UniversalShaderEditor : ShaderGUI
 		Rect textureRect = new Rect (r.x, r.y, r.width - colorRect.width, r.height);
 
 		// Texture
-		r.height = TextureProperty (textureProp, textureRect, Styles.diffuseTooltip);
+		r.height = TextureProperty (textureProp, textureRect, Styles.albedoTooltip);
 
 		// Color
 		m_MaterialEditor.ShaderProperty (colorRect, colorProp, string.Empty);
 
 		// Alpha cutoff
-		if (((BlendMode) material.GetFloat ("_Mode") == BlendMode.Cutout))
+        if (((BlendMode)material.GetFloat("_Mode") == BlendMode.Cutout))
 		{
 			r.y += r.height + 2;
 			EditorGUI.indentLevel += kSecondLevelIndentOffset;
@@ -278,7 +343,32 @@ internal class UniversalShaderEditor : ShaderGUI
 	}
 
 	// Returns height used + spacing
-	float DoEmissionArea (Rect r, MaterialProperty textureProp, MaterialProperty colorWithoutMapProp, MaterialProperty colorWithMapProp, MaterialProperty scaleProp)
+	float DoMetallicArea(Rect r, MaterialProperty textureProp, MaterialProperty metallic, MaterialProperty glossiness)
+	{
+		float startY = r.y;
+
+		//string tooltip = textureProp.textureValue == null ? string.Empty : ;
+		r.height = TextureProperty(textureProp, r, Styles.metallicMapTooltip);
+
+		// If no texture then show metallic and glosiness sliders
+		if (textureProp.textureValue == null)
+		{
+			// Metallic
+			EditorGUI.indentLevel += kSecondLevelIndentOffset;
+			m_MaterialEditor.ShaderProperty (r, metallic, metallic.displayName);
+
+			r.y += r.height + 2;
+
+			// Glossiness
+			m_MaterialEditor.ShaderProperty (r, glossiness, glossiness.displayName);
+			EditorGUI.indentLevel -= kSecondLevelIndentOffset;
+		}
+
+		return r.yMax - startY + kVerticalSpacing;
+	}
+
+	// Returns height used + spacing
+	float DoEmissionArea (Rect r, MaterialProperty textureProp, MaterialProperty colorWithoutMapProp, MaterialProperty colorWithMapProp, MaterialProperty scaleProp, Material material)
 	{
 		float startY = r.y;
 		Rect colorRect = GetColorPropertyCustomRect (r);
@@ -295,13 +385,20 @@ internal class UniversalShaderEditor : ShaderGUI
 		var colorProp = (emissionMap.textureValue != null) ? colorWithMapProp: colorWithoutMapProp;
 		m_MaterialEditor.ShaderProperty (colorRect, colorProp, string.Empty);
 		
-		if (EvalFinalEmissionColor ().grayscale > (1.0f/255.0f) && lightmapping != null)
+		// Dynamic Lightmapping mode
+		if (ShouldEmissionBeEnabled(EvalFinalEmissionColor ()) && lightmapping != null)
 		{
 			r.y += r.height + 2;
 
 			EditorGUI.indentLevel += kSecondLevelIndentOffset;
 			m_MaterialEditor.ShaderProperty (r, lightmapping, lightmapping.displayName);
 			EditorGUI.indentLevel -= kSecondLevelIndentOffset;
+		}
+
+		if (!HasValidEmissiveKeyword (material))
+		{
+			r.width += colorRect.width + 4;
+			WarningBox (ref r, Styles.emissiveWarning);
 		}
 
 		return r.yMax - startY + kVerticalSpacing;
@@ -311,7 +408,7 @@ internal class UniversalShaderEditor : ShaderGUI
 	float DoDetailAlbedoArea (Rect r, MaterialProperty textureProp, Material mat)
 	{
 		float startY = r.y;
-		r.height = TextureProperty (textureProp, r, Styles.detailDiffuseTooltip);
+		r.height = TextureProperty (textureProp, r, Styles.detailAlbedoTooltip);
 		return r.yMax - startY + kVerticalSpacing;
 	}
 
@@ -360,12 +457,35 @@ internal class UniversalShaderEditor : ShaderGUI
 		return emission.colorValue * Mathf.LinearToGammaSpace (emissionScale.floatValue);
 	}
 
+	static bool ShouldEmissionBeEnabled (Color color)
+	{
+		return color.grayscale > (0.1f / 255.0f);
+	}
+
 	void SetMaterialKeywords (Material material)
 	{
+		// Note: keywords must be based on Material value not on MaterialProperty due to multi-edit & material animation
+		// (MaterialProperty value might come from renderer material property block)
 		SetKeyword (material, "_NORMALMAP", material.GetTexture ("_BumpMap") || material.GetTexture ("_DetailNormalMap"));
-		SetKeyword (material, "_SPECGLOSSMAP", material.GetTexture ("_SpecGlossMap"));
+		if (m_WorkflowMode == WorkflowMode.Specular)
+			SetKeyword (material, "_SPECGLOSSMAP", material.GetTexture ("_SpecGlossMap"));
+		else if (m_WorkflowMode == WorkflowMode.Metallic)
+			SetKeyword (material, "_METALLICGLOSSMAP", material.GetTexture ("_MetallicGlossMap"));
 		SetKeyword (material, "_PARALLAXMAP", material.GetTexture ("_ParallaxMap"));
 		SetKeyword (material, "_DETAIL_MULX2", material.GetTexture ("_DetailAlbedoMap") || material.GetTexture ("_DetailNormalMap"));
+		SetKeyword (material, "_EMISSION", ShouldEmissionBeEnabled (material.GetColor("_EmissionColor")));
+	}
+
+	bool HasValidEmissiveKeyword (Material material)
+	{
+		// Material animation might be out of sync with the material keyword.
+		// So if the emission support is disabled on the material, but the property blocks have a value that requires it, then we need to show a warning.
+		// (note: (Renderer MaterialPropertyBlock applies its values to emissionColorForRendering))
+		bool hasEmissionKeyword = material.IsKeywordEnabled ("_EMISSION");
+		if (!hasEmissionKeyword && ShouldEmissionBeEnabled (emissionColorForRendering.colorValue))
+			return false;
+		else
+			return true;
 	}
 
 	void MaterialChanged (Material material)
@@ -373,42 +493,14 @@ internal class UniversalShaderEditor : ShaderGUI
 		// Clamp EmissionScale to always positive
 		if (emissionScale.floatValue < 0.0f)
 			emissionScale.floatValue = 0.0f;
+		// Apply combined emission value
 		Color emissionColorOut = EvalFinalEmissionColor ();
-		material.SetColor ("_EmissionColor", emissionColorOut);
+		emissionColorForRendering.colorValue = emissionColorOut;
 
-		// Handle Blending modes
-		switch ((BlendMode)blendMode.floatValue)
-		{
-			case BlendMode.Opaque:
-				material.SetInt ("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-				material.SetInt ("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
-				material.SetInt ("_ZWrite", 1);
-				material.DisableKeyword ("_ALPHATEST_ON");
-				material.DisableKeyword ("_ALPHABLEND_ON");
-				material.renderQueue = -1;
-				break;
-			case BlendMode.Cutout:
-				material.SetInt ("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
-				material.SetInt ("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
-				material.SetInt ("_ZWrite", 1);
-				material.EnableKeyword ("_ALPHATEST_ON");
-				material.DisableKeyword ("_ALPHABLEND_ON");
-				material.renderQueue = 2450;
-				break;
-			case BlendMode.Transparent:
-				material.SetInt ("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-				material.SetInt ("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-				material.SetInt ("_ZWrite", 0);
-				material.DisableKeyword ("_ALPHATEST_ON");
-				material.EnableKeyword ("_ALPHABLEND_ON");
-				material.renderQueue = 3000;
-				break;
-		}
+        // Handle Blending modes
+        SetupMaterialWithBlendMode(material, (BlendMode)blendMode.floatValue);
 
-		SetKeyword (material, "_EMISSIONMAP", emissionColorOut.grayscale > (1.0f / 255.0f));
-		SetMaterialKeywords (material);
-
-		EditorUtility.SetDirty (material);
+        SetMaterialKeywords (material);
 	}
 
 	static void SetKeyword(Material m, string keyword, bool state)
@@ -421,6 +513,11 @@ internal class UniversalShaderEditor : ShaderGUI
 
 	static MaterialProperty FindProperty(string propertyName, MaterialProperty[] properties)
 	{
+		return FindProperty (propertyName, properties, true);
+	}
+
+	static MaterialProperty FindProperty(string propertyName, MaterialProperty[] properties, bool propertyIsMandatory)
+	{
 		for (var i = 0; i < properties.Length; i++)
 		{
 			if (properties[i] != null && properties[i].name == propertyName)
@@ -430,8 +527,10 @@ internal class UniversalShaderEditor : ShaderGUI
 				return prop;
 			}
 		}
-		// Outcommented while developing StandardShader
-		Debug.LogError("Could not find MaterialProperty: '" + propertyName);
+
+		// We assume all required properties can be found, otherwise something is broken
+		if (propertyIsMandatory)
+			throw new ArgumentException("Could not find MaterialProperty: '" + propertyName + "', Num properties: " + properties.Length);
 		return null;
 	}
 }

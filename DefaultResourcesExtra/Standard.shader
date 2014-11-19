@@ -2,14 +2,14 @@ Shader "Standard"
 {
 	Properties
 	{
-		[LM_Albedo] [LM_Transparency] _Color("Color", Color) = (1,1,1)	
-		[LM_MasterTilingOffset] [LM_Albedo] _MainTex("Diffuse", 2D) = "white" {}
+		[LM_Albedo] [LM_Transparency] _Color("Color", Color) = (1,1,1,1)	
+		[LM_MasterTilingOffset] [LM_Albedo] _MainTex("Albedo", 2D) = "white" {}
 		
 		[LM_TransparencyCutOff] _AlphaTestRef("Alpha Cutoff", Range(0.0, 1.0)) = 0.5
 
 		[LM_Glossiness] _Glossiness("Smoothness", Range(0.0, 1.0)) = 0.0
-		[LM_Specular] _SpecularColor("Specular", Color) = (0.2,0.2,0.2)	
-		[LM_Specular] [LM_Glossiness] _SpecGlossMap("Specular", 2D) = "white" {}
+		[LM_Metallic] _Metallic("Metallic", Range(0.0, 1.0)) = 0.0
+		[LM_Metallic] [LM_Glossiness] _MetallicGlossMap("Metallic", 2D) = "white" {}
 
 		 _BumpScale("Scale", Float) = 1.0
 		[LM_NormalMap] _BumpMap("Normal Map", 2D) = "bump" {}
@@ -18,23 +18,26 @@ Shader "Standard"
 		_ParallaxMap ("Height Map", 2D) = "black" {}
 
 		_OcclusionStrength("Strength", Range(0.0, 1.0)) = 1.0
-		_Occlusion("Occlusion", 2D) = "white" {}
+		_OcclusionMap("Occlusion", 2D) = "white" {}
 
-		[HideInInspector] _EmissionScaleUI("Scale", Float) = 1.0
-		[HideInInspector] _EmissionColorUI("Color", Color) = (0,0,0)
-		[HideInInspector] _EmissionColorWithMapUI("Color", Color) = (1,1,1)
 		[LM_Emission] _EmissionColor("Color", Color) = (0,0,0)
 		[LM_Emission] _EmissionMap("Emission", 2D) = "white" {}
-		[KeywordEnum(Static Lightmaps, Dynamic Lightmaps)]  _Lightmapping ("Lightmapper", Int) = 1
 		
 		_DetailMask("Detail Mask", 2D) = "white" {}
 
-		_DetailAlbedoMap("Detail Diffuse x2", 2D) = "grey" {}
+		_DetailAlbedoMap("Detail Albedo x2", 2D) = "grey" {}
 		_DetailNormalMapScale("Scale", Float) = 1.0
 		_DetailNormalMap("Normal Map", 2D) = "bump" {}
 
 		[KeywordEnum(UV1, UV2)] _UVSec ("UV Set for secondary textures", Float) = 0
 
+		// UI-only data
+		[KeywordEnum(Baked, Realtime)]  _Lightmapping ("GI", Int) = 1
+		[HideInInspector] _EmissionScaleUI("Scale", Float) = 1.0
+		[HideInInspector] _EmissionColorUI("Color", Color) = (0,0,0)
+		[HideInInspector] _EmissionColorWithMapUI("Color", Color) = (1,1,1)
+
+		// Blending state
 		[HideInInspector] _Mode ("__mode", Float) = 0.0
 		[HideInInspector] _SrcBlend ("__src", Float) = 1.0
 		[HideInInspector] _DstBlend ("__dst", Float) = 0.0
@@ -44,6 +47,7 @@ Shader "Standard"
 	CGINCLUDE
 		//@TODO: should this be pulled into a shader_feature, to be able to turn it off?
 		#define _GLOSSYENV 1
+		#define UNITY_SETUP_BRDF_INPUT MetallicSetup
 	ENDCG
 
 	SubShader
@@ -67,20 +71,13 @@ Shader "Standard"
 			// TEMPORARY: GLES2.0 temporarily disabled to prevent errors spam on devices without textureCubeLodEXT
 			#pragma exclude_renderers gles
 			
-			#if !defined(SHADER_API_MOBILE)
-			#define UNITY_BRDF_PBS BRDF1_Unity_PBS
-			#else
-			#define UNITY_BRDF_PBS BRDF2_Unity_PBS
-			#endif
-			//#define UNITY_BRDF_WITH_ASPERITY
 			// -------------------------------------
-
 					
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON
-			#pragma shader_feature _EMISSIONMAP
+			#pragma shader_feature _EMISSION
 			//ALWAYS ON shader_feature _GLOSSYENV
-			#pragma shader_feature _SPECGLOSSMAP 
+			#pragma shader_feature _METALLICGLOSSMAP 
 			#pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature _PARALLAXMAP
 			
@@ -90,7 +87,7 @@ Shader "Standard"
 			#pragma vertex vertForwardBase
 			#pragma fragment fragForwardBase
 
-			#include "UnityUniversalCore.cginc"
+			#include "UnityStandardCore.cginc"
 
 			ENDCG
 		}
@@ -110,18 +107,12 @@ Shader "Standard"
 			// GLES2.0 temporarily disabled to prevent errors spam on devices without textureCubeLodEXT
 			#pragma exclude_renderers gles
 
-			#if !defined(SHADER_API_MOBILE)
-			#define UNITY_BRDF_PBS BRDF1_Unity_PBS
-			#else
-			#define UNITY_BRDF_PBS BRDF2_Unity_PBS
-			#endif
-			//#define UNITY_BRDF_WITH_ASPERITY
 			// -------------------------------------
 
 			
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON
-			#pragma shader_feature _SPECGLOSSMAP
+			#pragma shader_feature _METALLICGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature _PARALLAXMAP
 			
@@ -131,7 +122,7 @@ Shader "Standard"
 			#pragma vertex vertForwardAdd
 			#pragma fragment fragForwardAdd
 
-			#include "UnityUniversalCore.cginc"
+			#include "UnityStandardCore.cginc"
 
 			ENDCG
 		}
@@ -148,12 +139,6 @@ Shader "Standard"
 			// TEMPORARY: GLES2.0 temporarily disabled to prevent errors spam on devices without textureCubeLodEXT
 			#pragma exclude_renderers gles
 			
-			#if !defined(SHADER_API_MOBILE)
-			#define UNITY_BRDF_PBS BRDF1_Unity_PBS
-			#else
-			#define UNITY_BRDF_PBS BRDF2_Unity_PBS
-			#endif
-			//#define UNITY_BRDF_WITH_ASPERITY
 			// -------------------------------------
 
 
@@ -163,7 +148,7 @@ Shader "Standard"
 			#pragma vertex vertShadowCaster
 			#pragma fragment fragShadowCaster
 
-			#include "UnityUniversalShadow.cginc"
+			#include "UnityStandardShadow.cginc"
 
 			ENDCG
 		}
@@ -179,19 +164,14 @@ Shader "Standard"
 			// TEMPORARY: GLES2.0 temporarily disabled to prevent errors spam on devices without textureCubeLodEXT
 			#pragma exclude_renderers nomrt gles
 			
-			#if !defined(SHADER_API_MOBILE)
-			#define UNITY_BRDF_PBS BRDF1_Unity_PBS
-			#else
-			#define UNITY_BRDF_PBS BRDF2_Unity_PBS
-			#endif
-			//#define UNITY_BRDF_WITH_ASPERITY
+
 			// -------------------------------------
 
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON
-			#pragma shader_feature _EMISSIONMAP
+			#pragma shader_feature _EMISSION
 			//ALWAYS ON shader_feature _GLOSSYENV
-			#pragma shader_feature _SPECGLOSSMAP
+			#pragma shader_feature _METALLICGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 			#pragma shader_feature _PARALLAXMAP
 
@@ -203,7 +183,7 @@ Shader "Standard"
 			#pragma vertex vertDeferred
 			#pragma fragment fragDeferred
 
-			#include "UnityUniversalCore.cginc"
+			#include "UnityStandardCore.cginc"
 
 			ENDCG
 		}
@@ -226,15 +206,12 @@ Shader "Standard"
 
 			CGPROGRAM
 			#pragma target 2.0
-			#define SHADER_API_SM2 1
-			#define UNITY_BRDF_PBS BRDF3_Unity_PBS
-
 			
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON
-			#pragma shader_feature _EMISSIONMAP 
+			#pragma shader_feature _EMISSION 
 			// ALWAYS ON shader_feature _GLOSSYENV
-			#pragma shader_feature _SPECGLOSSMAP 
+			#pragma shader_feature _METALLICGLOSSMAP 
 			#pragma shader_feature ___ _DETAIL_MULX2
 			// NOT SUPPORTED in SM2.0 shader_feature _PARALLAXMAP
 			#pragma skip_variants SHADOWS_SOFT
@@ -246,7 +223,7 @@ Shader "Standard"
 			#pragma vertex vertForwardBase
 			#pragma fragment fragForwardBase
 
-			#include "UnityUniversalCore.cginc"
+			#include "UnityStandardCore.cginc"
 
 			ENDCG
 		}
@@ -263,13 +240,10 @@ Shader "Standard"
 			
 			CGPROGRAM
 			#pragma target 2.0
-			#define SHADER_API_SM2 1
-			#define UNITY_BRDF_PBS BRDF3_Unity_PBS
-		
-		
+
 			#pragma shader_feature _NORMALMAP
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON
-			#pragma shader_feature _SPECGLOSSMAP
+			#pragma shader_feature _METALLICGLOSSMAP
 			#pragma shader_feature ___ _DETAIL_MULX2
 			// NOT SUPPORTED in SM2.0 shader_feature _PARALLAXMAP
 			#pragma skip_variants SHADOWS_SOFT
@@ -280,7 +254,7 @@ Shader "Standard"
 			#pragma vertex vertForwardAdd
 			#pragma fragment fragForwardAdd
 
-			#include "UnityUniversalCore.cginc"
+			#include "UnityStandardCore.cginc"
 
 			ENDCG
 		}
@@ -294,9 +268,6 @@ Shader "Standard"
 
 			CGPROGRAM
 			#pragma target 2.0
-			#define SHADER_API_SM2 1
-			#define UNITY_BRDF_PBS BRDF3_Unity_PBS
-
 
 			#pragma shader_feature _ _ALPHATEST_ON _ALPHABLEND_ON
 			#pragma skip_variants SHADOWS_SOFT
@@ -305,12 +276,12 @@ Shader "Standard"
 			#pragma vertex vertShadowCaster
 			#pragma fragment fragShadowCaster
 
-			#include "UnityUniversalShadow.cginc"
+			#include "UnityStandardShadow.cginc"
 
 			ENDCG
 		}
 	}
 
 	FallBack "VertexLit"
-	CustomEditor "UniversalShaderEditor"
+	CustomEditor "StandardShaderGUI"
 }

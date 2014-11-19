@@ -1,5 +1,5 @@
-#ifndef UNITY_UNIVERSAL_SHADOW_INCLUDED
-#define UNITY_UNIVERSAL_SHADOW_INCLUDED
+#ifndef UNITY_STANDARD_SHADOW_INCLUDED
+#define UNITY_STANDARD_SHADOW_INCLUDED
 
 // NOTE: had to split shadow functions into separate file,
 // otherwise compiler gives trouble with LIGHTING_COORDS macro (in UnityUniversalCore.cginc)
@@ -10,7 +10,7 @@
 
 // Do dithering for alpha blended shadows on SM3+/desktop;
 // on lesser systems do simple alpha-tested shadows
-#if defined(_ALPHABLEND_ON) && !(defined(SHADER_API_SM2) || defined (SHADER_API_MOBILE) || defined(SHADER_API_D3D11_9X) || defined (SHADER_API_PSP2) || defined (SHADER_API_PSM))
+#if defined(_ALPHABLEND_ON) && !((SHADER_TARGET < 30) || defined (SHADER_API_MOBILE) || defined(SHADER_API_D3D11_9X) || defined (SHADER_API_PSP2) || defined (SHADER_API_PSM))
 #define UNIVERSAL_USE_DITHER_MASK 1
 #endif
 
@@ -96,4 +96,4 @@ half4 fragShadowCaster (
 	SHADOW_CASTER_FRAGMENT(i)
 }			
 
-#endif // UNITY_UNIVERSAL_SHADOW_INCLUDED
+#endif // UNITY_STANDARD_SHADOW_INCLUDED

@@ -77,24 +77,26 @@ inline fixed4 LightingLambert_PrePass (SurfaceOutput s, half4 light)
 }
 
 
-inline half4 LightingLambert_Deferred (SurfaceOutput s, out half4 outDiffuse, out half4 outSpecRoughness, out half4 outNormal)
+inline half4 LightingLambert_Deferred (SurfaceOutput s, out half4 outDiffuse, out half4 outSpecSmoothness, out half4 outNormal)
 {
 	outDiffuse = half4(s.Albedo, s.Alpha);
-	outSpecRoughness = 0.0;
+	outSpecSmoothness = 0.0;
 	outNormal = half4(s.Normal * 0.5 + 0.5, 1);
 	half4 emission = half4(s.Emission, 1);
 	return emission;
 }
 
 
+// NOTE: alpha channel in _DirLightmap function should return Specular intensity (for PrePass)
 inline half4 LightingLambert_DirLightmap (SurfaceOutput s, fixed4 color, fixed4 scale, bool surfFuncWritesNormal)
 {
 	UNITY_DIRBASIS
 	half3 scalePerBasisVector;
 	
-	half3 lm = DirLightmapDiffuse (unity_DirBasis, color, scale, s.Normal, surfFuncWritesNormal, scalePerBasisVector);
-	
-	return half4(lm, 0);
+	half4 c;
+	c.rgb = DirLightmapDiffuse (unity_DirBasis, color, scale, s.Normal, surfFuncWritesNormal, scalePerBasisVector);
+	c.a = 0; // No Specular
+	return c;
 }
 
 
@@ -125,16 +127,17 @@ inline fixed4 LightingBlinnPhong_PrePass (SurfaceOutput s, half4 light)
 	return c;
 }
 
-inline half4 LightingBlinnPhong_Deferred (SurfaceOutput s, out half4 outDiffuse, out half4 outSpecRoughness, out half4 outNormal)
+inline half4 LightingBlinnPhong_Deferred (SurfaceOutput s, out half4 outDiffuse, out half4 outSpecSmoothness, out half4 outNormal)
 {
 	outDiffuse = half4(s.Albedo, s.Alpha);
-	outSpecRoughness = half4(_SpecColor.rgb, 1.0 - s.Specular);
+	outSpecSmoothness = half4(_SpecColor.rgb, s.Specular);
 	outNormal = half4(s.Normal * 0.5 + 0.5, 1);
 	half4 emission = half4(s.Emission, 1);
 	return emission;
 }
 
 
+// NOTE: alpha channel in _DirLightmap function should return Specular intensity (for PrePass)
 inline half4 LightingBlinnPhong_DirLightmap (SurfaceOutput s, fixed4 color, fixed4 scale, half3 viewDir, bool surfFuncWritesNormal, out half3 specColor)
 {
 	UNITY_DIRBASIS
@@ -151,8 +154,6 @@ inline half4 LightingBlinnPhong_DirLightmap (SurfaceOutput s, fixed4 color, fixe
 	// specColor used outside in the forward path, compiled out in prepass
 	specColor = lm * _SpecColor.rgb * s.Gloss * spec;
 	
-	// spec from the alpha component is used to calculate specular
-	// in the Lighting*_Prepass function, it's not used in forward
 	return half4(lm, spec);
 }
 

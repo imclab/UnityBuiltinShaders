@@ -71,7 +71,7 @@ v2f_surf vert_surf (appdata_full v)
 	#ifndef LIGHTMAP_OFF
 	o.lmap.xy = v.texcoord1.xy * unity_LightmapST.xy + unity_LightmapST.zw;
 	#endif
-	float3 worldN = UnityObjectToWorldNorm(v.normal);
+	float3 worldN = UnityObjectToWorldNormal(v.normal);
 	#ifdef LIGHTMAP_OFF
 	o.normal = worldN;
 	#endif
@@ -85,9 +85,6 @@ v2f_surf vert_surf (appdata_full v)
 	UNITY_TRANSFER_FOG(o,o.pos);
 	return o;
 }
-#ifndef LIGHTMAP_OFF
-sampler2D unity_Lightmap;
-#endif
 fixed4 frag_surf (v2f_surf IN) : SV_Target
 {
 	Input surfIN;
@@ -110,7 +107,7 @@ fixed4 frag_surf (v2f_surf IN) : SV_Target
 	c.rgb = o.Albedo * IN.vlight * atten;
 	#endif // LIGHTMAP_OFF
 	#ifndef LIGHTMAP_OFF
-	fixed3 lm = DecodeLightmap (tex2D(unity_Lightmap, IN.lmap.xy));
+	fixed3 lm = DecodeLightmap (UNITY_SAMPLE_TEX2D(unity_Lightmap, IN.lmap.xy));
 	#ifdef SHADOWS_SCREEN
 	c.rgb += o.Albedo * min(lm, atten*2);
 	#else
@@ -119,6 +116,7 @@ fixed4 frag_surf (v2f_surf IN) : SV_Target
 	c.a = o.Alpha;
 	#endif // !LIGHTMAP_OFF
 	UNITY_APPLY_FOG(IN.fogCoord, c);
+	UNITY_OPAQUE_ALPHA(c.a);
 	return c;
 }
 
